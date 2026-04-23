@@ -9,8 +9,10 @@ export const FlyingBot = () => {
 
   return (
     <motion.div
-      aria-hidden="true"
-      className="pointer-events-none fixed bottom-10 left-4 z-40 md:bottom-12 md:left-8"
+      className="fixed bottom-10 left-4 z-40 cursor-grab touch-none active:cursor-grabbing md:bottom-12 md:left-8"
+      drag
+      dragMomentum={false}
+      dragConstraints={{ top: -520, right: 260, bottom: 40, left: -20 }}
       style={{ x, y, rotate }}
     >
       <motion.div
