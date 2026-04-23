@@ -12,7 +12,7 @@ interface LogoProps {
 const heights = {
   sm: "h-8 md:h-9",
   lg: "h-12 md:h-14",
-  xl: "h-20 md:h-28 lg:h-32",
+  xl: "h-64 md:h-80 lg:h-96",
 };
 
 export const Logo = ({ className, size = "lg", priority = false }: LogoProps) => {
