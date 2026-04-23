@@ -3,14 +3,14 @@ import botSrc from "@/assets/garanticon-bot.png";
 
 export const FlyingBot = () => {
   const { scrollYProgress } = useScroll();
-  const x = useTransform(scrollYProgress, [0, 0.28, 0.58, 1], [0, -34, 22, -18]);
-  const y = useTransform(scrollYProgress, [0, 0.28, 0.58, 1], [0, -170, -78, -230]);
+  const x = useTransform(scrollYProgress, [0, 0.28, 0.58, 1], [0, 34, -18, 24]);
+  const y = useTransform(scrollYProgress, [0, 0.28, 0.58, 1], [0, -150, -68, -210]);
   const rotate = useTransform(scrollYProgress, [0, 0.28, 0.58, 1], [-5, 11, -9, 7]);
 
   return (
     <motion.div
       aria-hidden="true"
-      className="pointer-events-none fixed bottom-6 right-4 z-40 md:bottom-8 md:right-8"
+      className="pointer-events-none fixed bottom-10 left-4 z-40 md:bottom-12 md:left-8"
       style={{ x, y, rotate }}
     >
       <motion.div
@@ -26,7 +26,7 @@ export const FlyingBot = () => {
           height={512}
           loading="eager"
           decoding="async"
-          className="relative h-20 w-20 select-none object-contain drop-shadow-xl md:h-24 md:w-24"
+          className="relative h-28 w-28 select-none object-contain drop-shadow-xl md:h-32 md:w-32"
         />
       </motion.div>
     </motion.div>
