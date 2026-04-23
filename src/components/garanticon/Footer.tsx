@@ -3,7 +3,7 @@ import { Logo } from "./Logo";
 
 export const Footer = () => {
   return (
-    <footer className="bg-foreground px-6 py-16 text-background">
+    <footer id="footer" className="bg-foreground px-6 py-16 text-background">
       <div className="mx-auto max-w-6xl">
         <Logo variant="dark" size="lg" />
 
