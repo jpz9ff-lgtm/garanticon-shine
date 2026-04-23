@@ -39,11 +39,12 @@ export const Hero = ({ onCta }: HeroProps) => {
         />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center">
+      <div className="relative z-10 flex flex-col items-center text-center [align-items:center]">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
+          className="flex items-center justify-center self-center"
         >
           <Logo size="xl" variant="dark" priority />
         </motion.div>

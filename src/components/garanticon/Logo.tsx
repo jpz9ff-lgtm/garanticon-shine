@@ -12,7 +12,7 @@ interface LogoProps {
 const sizes = {
   sm: "max-w-32 md:max-w-36",
   lg: "max-w-28 md:max-w-32",
-  xl: "max-w-[280px] md:max-w-[28rem] lg:max-w-[38rem]",
+  xl: "max-w-[240px] max-h-[120px]",
 };
 
 export const Logo = ({ className, size = "lg", priority = false }: LogoProps) => {
@@ -24,7 +24,7 @@ export const Logo = ({ className, size = "lg", priority = false }: LogoProps) =>
       height={672}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      className={cn("h-auto w-auto max-w-full select-none object-contain aspect-auto", sizes[size], className)}
+      className={cn("block h-auto w-auto max-w-full select-none object-contain aspect-auto saturate-[1.4] brightness-[1.05]", sizes[size], className)}
     />
   );
 };
