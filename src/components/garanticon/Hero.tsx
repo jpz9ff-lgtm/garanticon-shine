@@ -52,7 +52,7 @@ export const Hero = ({ onCta }: HeroProps) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-          className="mt-6 max-w-2xl text-lg font-medium text-background/90 md:text-2xl"
+          className="-mt-8 max-w-2xl text-lg font-medium text-background/90 md:text-2xl md:-mt-12"
         >
           Tu garantía, siempre contigo
         </motion.p>
@@ -61,7 +61,7 @@ export const Hero = ({ onCta }: HeroProps) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-          className="mt-10"
+          className="mt-2"
         >
           <Button
             onClick={onCta}
