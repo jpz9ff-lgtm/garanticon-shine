@@ -18,9 +18,9 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
 
-    --primary: 17 95% 48%;               /* #F25C05 orange */
+    --primary: 22 87% 50%;               /* #EF6212 logo orange */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 22 100% 60%;
+    --primary-glow: 22 95% 60%;
 
     --secondary: 245 56% 56%;            /* #5B4FCF purple */
     --secondary-foreground: 0 0% 100%;
@@ -36,15 +36,15 @@ All colors MUST be HSL.
 
     --border: 40 8% 85%;
     --input: 40 8% 85%;
-    --ring: 17 95% 48%;
+    --ring: 22 87% 50%;
 
     --radius: 1rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(17 95% 48%), hsl(245 56% 56%));
-    --gradient-glow-orange: radial-gradient(circle at 30% 30%, hsl(17 95% 48% / 0.35), transparent 60%);
+    --gradient-primary: linear-gradient(135deg, hsl(22 87% 50%), hsl(245 56% 56%));
+    --gradient-glow-orange: radial-gradient(circle at 30% 30%, hsl(22 87% 50% / 0.35), transparent 60%);
     --gradient-glow-purple: radial-gradient(circle at 70% 70%, hsl(245 56% 56% / 0.30), transparent 60%);
     --shadow-soft: 0 10px 40px -10px hsl(0 0% 10% / 0.10);
-    --shadow-glow: 0 0 0 4px hsl(17 95% 48% / 0.15);
+    --shadow-glow: 0 0 0 4px hsl(22 87% 50% / 0.15);
 
     --sidebar-background: 0 0% 98%;
 
