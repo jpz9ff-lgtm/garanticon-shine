@@ -5,6 +5,7 @@ import { AssistanceForm } from "@/components/garanticon/AssistanceForm";
 import { Footer } from "@/components/garanticon/Footer";
 import { FlyingBot } from "@/components/garanticon/FlyingBot";
 import { Navbar } from "@/components/garanticon/Navbar";
+import { WhatsAppButton } from "@/components/garanticon/WhatsAppButton";
 
 const Index = () => {
   const [lookup, setLookup] = useState<LookupResult>({ plate: "", policy: "" });
@@ -17,6 +18,7 @@ const Index = () => {
       <h1 className="sr-only">Garanticon — Garantía premium para tu coche en España</h1>
       <Navbar onNavigate={scrollTo} />
       <FlyingBot />
+      <WhatsAppButton />
       <Hero onCta={() => scrollTo("lookup")} />
       <WarrantyLookup onResult={setLookup} onRequestAssistance={() => scrollTo("assistance")} />
       <AssistanceForm prefillPlate={lookup.plate} prefillPolicy={lookup.policy} />
