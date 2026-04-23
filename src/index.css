@@ -128,6 +128,25 @@ All colors MUST be HSL.
   }
   .shadow-soft { box-shadow: var(--shadow-soft); }
   .shadow-glow { box-shadow: var(--shadow-glow); }
+
+  .garanticon-logo {
+    filter: saturate(1.4) brightness(1.05);
+  }
+
+  @media (max-width: 768px) and (orientation: portrait) {
+    .hero-logo-container {
+      height: auto;
+      align-items: center;
+    }
+
+    .hero-logo-container .garanticon-logo {
+      width: 200px;
+      height: auto;
+      max-height: 100px;
+      object-fit: contain;
+      aspect-ratio: auto;
+    }
+  }
 }
 
 @keyframes pulse-glow {

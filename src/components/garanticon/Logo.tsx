@@ -24,7 +24,7 @@ export const Logo = ({ className, size = "lg", priority = false }: LogoProps) =>
       height={672}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      className={cn("h-auto w-auto max-w-full select-none object-contain aspect-auto", sizes[size], className)}
+      className={cn("garanticon-logo h-auto w-auto max-w-full select-none object-contain aspect-auto", sizes[size], className)}
     />
   );
 };
