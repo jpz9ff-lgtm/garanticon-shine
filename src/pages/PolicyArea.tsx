@@ -15,6 +15,16 @@ const PolicyArea = () => {
       return;
     }
 
+    if (id === "assistance") {
+      window.location.href = "/asistencia";
+      return;
+    }
+
+    if (id === "professionals") {
+      window.location.href = "/profesionales";
+      return;
+    }
+
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 

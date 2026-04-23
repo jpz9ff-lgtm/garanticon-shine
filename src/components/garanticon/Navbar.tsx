@@ -13,7 +13,7 @@ const links = [
   { id: "hero", label: "Inicio" },
   { id: "lookup", label: "Mi póliza" },
   { id: "assistance", label: "Asistencia" },
-  { id: "footer", label: "Contacto" },
+  { id: "professionals", label: "Profesionales" },
 ];
 
 export const Navbar = ({ onNavigate }: NavbarProps) => {

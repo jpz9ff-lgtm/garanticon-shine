@@ -15,6 +15,16 @@ const Index = () => {
       return;
     }
 
+    if (id === "assistance") {
+      navigate("/asistencia");
+      return;
+    }
+
+    if (id === "professionals") {
+      navigate("/profesionales");
+      return;
+    }
+
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
