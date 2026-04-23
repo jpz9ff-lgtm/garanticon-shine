@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
 import { ArrowDown } from "lucide-react";
+import heroVideo from "@/assets/hero.mp4";
 
 interface HeroProps {
   onCta: () => void;
@@ -9,9 +10,25 @@ interface HeroProps {
 
 export const Hero = ({ onCta }: HeroProps) => {
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6">
-      {/* Animated gradient glows */}
-      <div className="pointer-events-none absolute inset-0">
+    <section
+      id="hero"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-foreground px-6"
+    >
+      {/* Background video */}
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        src={heroVideo}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      />
+      {/* Dark overlay for legibility */}
+      <div className="absolute inset-0 bg-foreground/55" />
+      {/* Subtle brand glows on top of video */}
+      <div className="pointer-events-none absolute inset-0 mix-blend-screen opacity-60">
         <div
           className="absolute -left-32 top-10 h-[480px] w-[480px] rounded-full blur-3xl animate-pulse-glow"
           style={{ background: "var(--gradient-glow-orange)" }}
@@ -19,10 +36,6 @@ export const Hero = ({ onCta }: HeroProps) => {
         <div
           className="absolute -right-32 bottom-10 h-[520px] w-[520px] rounded-full blur-3xl animate-pulse-glow"
           style={{ background: "var(--gradient-glow-purple)", animationDelay: "2s" }}
-        />
-        <div
-          className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl animate-pulse-glow opacity-40"
-          style={{ background: "var(--gradient-glow-orange)", animationDelay: "4s" }}
         />
       </div>
 
@@ -32,14 +45,14 @@ export const Hero = ({ onCta }: HeroProps) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          <Logo size="xl" />
+          <Logo size="xl" variant="dark" />
         </motion.div>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-          className="mt-6 max-w-2xl text-lg font-medium text-muted-foreground md:text-2xl"
+          className="mt-6 max-w-2xl text-lg font-medium text-background/90 md:text-2xl"
         >
           Tu garantía, siempre contigo
         </motion.p>
