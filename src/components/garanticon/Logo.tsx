@@ -9,10 +9,10 @@ interface LogoProps {
   priority?: boolean;
 }
 
-const heights = {
-  sm: "h-24 md:h-28",
-  lg: "h-12 md:h-14",
-  xl: "h-[32rem] md:h-[44rem] lg:h-[56rem] max-h-[80vh]",
+const sizes = {
+  sm: "w-32 md:w-36",
+  lg: "w-28 md:w-32",
+  xl: "w-[18rem] max-w-[88vw] md:w-[28rem] lg:w-[38rem]",
 };
 
 export const Logo = ({ className, size = "lg", priority = false }: LogoProps) => {
@@ -24,7 +24,7 @@ export const Logo = ({ className, size = "lg", priority = false }: LogoProps) =>
       height={672}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      className={cn("w-auto select-none scale-x-110 scale-y-90 md:scale-x-100 md:scale-y-100", heights[size], className)}
+      className={cn("h-auto max-w-full select-none object-contain", sizes[size], className)}
     />
   );
 };
