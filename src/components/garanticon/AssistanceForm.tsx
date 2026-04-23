@@ -12,12 +12,13 @@ import { Check } from "lucide-react";
 interface Props {
   prefillPlate?: string;
   prefillPolicy?: string;
+  embedded?: boolean;
 }
 
 const inputCls =
   "h-12 rounded-xl border-border bg-background text-base transition-all focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
 
-export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "" }: Props) => {
+export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded = false }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
   const [submitted, setSubmitted] = useState(false);
@@ -29,22 +30,24 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "" }: Props)
   };
 
   return (
-    <section id="assistance" ref={ref} className="bg-background px-6 py-24">
+    <section id={embedded ? undefined : "assistance"} ref={ref} className={embedded ? "bg-background" : "bg-background px-6 py-24"}>
       <div className="mx-auto max-w-3xl">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center text-3xl font-bold text-foreground md:text-5xl"
-        >
-          ¿Necesitas ayuda? Estamos aquí
-        </motion.h2>
+        {!embedded && (
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6 }}
+            className="text-center text-3xl font-bold text-foreground md:text-5xl"
+          >
+            ¿Necesitas ayuda? Estamos aquí
+          </motion.h2>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-12 rounded-3xl bg-card p-8 shadow-soft md:p-10"
+          className={`${embedded ? "mt-0" : "mt-12"} rounded-3xl bg-card p-8 shadow-soft md:p-10`}
         >
           <AnimatePresence mode="wait">
             {submitted ? (
