@@ -13,9 +13,10 @@ export interface LookupResult {
 interface Props {
   onResult: (r: LookupResult) => void;
   onRequestAssistance: () => void;
+  embedded?: boolean;
 }
 
-export const WarrantyLookup = ({ onResult, onRequestAssistance }: Props) => {
+export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false }: Props) => {
   const [plate, setPlate] = useState("");
   const [policy, setPolicy] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,22 +51,24 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance }: Props) => {
   const tier: "MAX" | "BASIC" = "MAX";
 
   return (
-    <section id="lookup" ref={sectionRef} className="bg-background px-6 py-24">
+    <section id={embedded ? undefined : "lookup"} ref={sectionRef} className={embedded ? "bg-background" : "bg-background px-6 py-24"}>
       <div className="mx-auto max-w-3xl">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center text-3xl font-bold text-foreground md:text-5xl"
-        >
-          Consulta el estado de tu póliza
-        </motion.h2>
+        {!embedded && (
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6 }}
+            className="text-center text-3xl font-bold text-foreground md:text-5xl"
+          >
+            Consulta el estado de tu póliza
+          </motion.h2>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-12 rounded-3xl bg-card p-8 shadow-soft md:p-10"
+          className={`${embedded ? "mt-0" : "mt-12"} rounded-3xl bg-card p-8 shadow-soft md:p-10`}
         >
           <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
             <div className="space-y-2">
