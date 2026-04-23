@@ -8,35 +8,43 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Garanticon design tokens */
+    --background: 40 14% 94%;            /* #F2F0ED */
+    --foreground: 0 0% 10%;              /* #1A1A1A */
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 17 95% 48%;               /* #F25C05 orange */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 22 100% 60%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 245 56% 56%;            /* #5B4FCF purple */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 10% 88%;
+    --muted-foreground: 0 0% 35%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 245 56% 56%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 40 8% 85%;
+    --input: 40 8% 85%;
+    --ring: 17 95% 48%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(17 95% 48%), hsl(245 56% 56%));
+    --gradient-glow-orange: radial-gradient(circle at 30% 30%, hsl(17 95% 48% / 0.35), transparent 60%);
+    --gradient-glow-purple: radial-gradient(circle at 70% 70%, hsl(245 56% 56% / 0.30), transparent 60%);
+    --shadow-soft: 0 10px 40px -10px hsl(0 0% 10% / 0.10);
+    --shadow-glow: 0 0 0 4px hsl(17 95% 48% / 0.15);
 
     --sidebar-background: 0 0% 98%;
 
@@ -101,5 +109,25 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
+
+@layer utilities {
+  .gradient-primary { background: var(--gradient-primary); }
+  .text-gradient-primary {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.1); }
+}
+.animate-pulse-glow { animation: pulse-glow 8s ease-in-out infinite; }
