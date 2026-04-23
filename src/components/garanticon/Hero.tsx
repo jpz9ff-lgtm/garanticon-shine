@@ -44,7 +44,6 @@ export const Hero = ({ onCta }: HeroProps) => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
-          className="hero-logo-container flex h-auto items-center justify-center"
         >
           <Logo size="xl" variant="dark" priority />
         </motion.div>
