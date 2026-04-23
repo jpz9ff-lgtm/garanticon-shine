@@ -1,35 +1,30 @@
-import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoSrc from "@/assets/logo.png";
 
 interface LogoProps {
   className?: string;
+  /** Kept for API compatibility — the image logo is the same on light & dark backgrounds. */
   variant?: "light" | "dark";
   size?: "sm" | "lg" | "xl";
+  priority?: boolean;
 }
 
-const sizes = {
-  sm: "text-xl",
-  lg: "text-3xl md:text-4xl",
-  xl: "text-5xl md:text-7xl lg:text-8xl",
+const heights = {
+  sm: "h-8 md:h-9",
+  lg: "h-12 md:h-14",
+  xl: "h-20 md:h-28 lg:h-32",
 };
 
-const iconSizes = {
-  sm: 20,
-  lg: 32,
-  xl: 56,
-};
-
-export const Logo = ({ className, variant = "light", size = "lg" }: LogoProps) => {
+export const Logo = ({ className, size = "lg", priority = false }: LogoProps) => {
   return (
-    <div className={cn("inline-flex items-center gap-3 font-extrabold tracking-tight", sizes[size], className)}>
-      <ShieldCheck
-        className="text-secondary"
-        size={iconSizes[size]}
-        strokeWidth={2.5}
-      />
-      <span className={variant === "dark" ? "text-background" : "text-primary"}>
-        GARANTICON
-      </span>
-    </div>
+    <img
+      src={logoSrc}
+      alt="Garanticon"
+      width={1584}
+      height={672}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      className={cn("w-auto select-none", heights[size], className)}
+    />
   );
 };
