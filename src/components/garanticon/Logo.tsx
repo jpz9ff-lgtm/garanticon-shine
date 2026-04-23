@@ -24,7 +24,7 @@ export const Logo = ({ className, size = "lg", priority = false }: LogoProps) =>
       height={672}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      className={cn("w-auto select-none scale-y-90", heights[size], className)}
+      className={cn("w-auto select-none scale-y-90 md:scale-y-100", heights[size], className)}
     />
   );
 };
