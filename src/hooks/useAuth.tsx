@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [dealer, setDealer] = useState<DealerInfo | null>(null);
   const [dealerError, setDealerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const inFlightSessionKey = useRef<string | null>(null);
+  const resolvedSessionKey = useRef<string | null>(null);
 
   const loadDealer = async (userId: string, options?: { retries?: number; delayMs?: number }) => {
     const retries = options?.retries ?? 8;
@@ -82,6 +84,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const syncAuthState = async (sess: Session | null) => {
       if (cancelled) return;
+      const sessionKey = sess?.access_token ?? sess?.user?.id ?? "anon";
+
+      if (inFlightSessionKey.current === sessionKey || resolvedSessionKey.current === sessionKey) {
+        setSession(sess);
+        setUser(sess?.user ?? null);
+        setLoading(false);
+        return;
+      }
+
+      inFlightSessionKey.current = sessionKey;
       setLoading(true);
       setSession(sess);
       setUser(sess?.user ?? null);
@@ -92,10 +104,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (cancelled) return;
         setDealer(loadedDealer);
         setDealerError(error);
+        resolvedSessionKey.current = sessionKey;
+        inFlightSessionKey.current = null;
         setLoading(false);
       } else {
         setDealer(null);
         setDealerError(null);
+        resolvedSessionKey.current = sessionKey;
+        inFlightSessionKey.current = null;
         setLoading(false);
       }
     };
@@ -132,6 +148,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     await supabase.auth.signOut();
+    inFlightSessionKey.current = null;
+    resolvedSessionKey.current = null;
     setSession(null);
     setUser(null);
     setDealer(null);
@@ -143,6 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       setLoading(true);
       setDealerError(null);
+      resolvedSessionKey.current = null;
       const { dealer: loadedDealer, error } = await loadDealer(user.id);
       setDealer(loadedDealer);
       setDealerError(error);
