@@ -31,7 +31,6 @@ const Login = () => {
       toast({ variant: "destructive", title: "No se ha podido iniciar sesión", description: error });
       return;
     }
-    navigate("/dealer/dashboard");
   };
 
   return (

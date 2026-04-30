@@ -10,6 +10,8 @@ interface DealerInfo {
   activo: boolean;
 }
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
@@ -28,73 +30,104 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [dealer, setDealer] = useState<DealerInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadDealer = async (userId: string) => {
-    const { data } = await supabase
-      .from("dealers")
-      .select("id, nombre_empresa, cif, email, activo")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setDealer(data ?? null);
+  const loadDealer = async (userId: string, options?: { retries?: number; delayMs?: number }) => {
+    const retries = options?.retries ?? 6;
+    const delayMs = options?.delayMs ?? 400;
+
+    let dealerData: DealerInfo | null = null;
+
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      const { data, error } = await supabase
+        .from("dealers")
+        .select("id, nombre_empresa, cif, email, activo")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (data) {
+        dealerData = data as DealerInfo;
+        break;
+      }
+
+      if (!error) {
+        break;
+      }
+
+      if (attempt < retries - 1) {
+        await wait(delayMs * (attempt + 1));
+      }
+    }
+
+    setDealer(dealerData);
+    return dealerData;
   };
 
   useEffect(() => {
-    // 1) listener primero
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const syncAuthState = async (sess: Session | null) => {
       setSession(sess);
       setUser(sess?.user ?? null);
+
       if (sess?.user) {
-        // diferido para evitar deadlock
-        setTimeout(() => loadDealer(sess.user.id), 0);
+        setLoading(true);
+        await loadDealer(sess.user.id);
+        setLoading(false);
       } else {
         setDealer(null);
+        setLoading(false);
       }
+    };
+
+    // 1) listener primero
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setTimeout(() => {
+        void syncAuthState(sess);
+      }, 0);
     });
 
     // 2) luego sesión actual
     supabase.auth.getSession().then(({ data: { session: sess } }) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        loadDealer(sess.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
+      void syncAuthState(sess);
     });
 
     return () => sub.subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+    if (error) {
+      setLoading(false);
+      return { error: error.message };
+    }
+
+    setSession(data.session ?? null);
+    setUser(data.user ?? null);
+
     if (data.user) {
-      // Pequeño retry: a veces el JWT tarda un instante en aplicarse al cliente PostgREST
-      let d: DealerInfo | null = null;
-      for (let i = 0; i < 4; i++) {
-        const { data: row } = await supabase
-          .from("dealers")
-          .select("id, nombre_empresa, cif, email, activo")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-        if (row) { d = row as DealerInfo; break; }
-        await new Promise((r) => setTimeout(r, 200));
-      }
+      const d = await loadDealer(data.user.id, { retries: 8, delayMs: 500 });
       if (!d) {
         await supabase.auth.signOut();
+        setLoading(false);
         return { error: "Esta cuenta no tiene un dealer asociado. Contacta con garanticon.es" };
       }
       if (!d.activo) {
         await supabase.auth.signOut();
+        setLoading(false);
         return { error: "Cuenta desactivada. Contacta con garanticon.es" };
       }
       setDealer(d);
     }
+
+    setLoading(false);
     return { error: null };
   };
 
   const signOut = async () => {
+    setLoading(true);
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
     setDealer(null);
+    setLoading(false);
   };
 
   const refreshDealer = async () => {
