@@ -89,6 +89,11 @@ const Login = () => {
               {submitting ? <Loader2 className="animate-spin" /> : "Entrar"}
             </Button>
           </form>
+          <p className="mt-4 text-center text-sm">
+            <Link to="/forgot-password" className="font-medium text-primary hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
           {!loading && user && !dealer && dealerError && (
             <div className="mt-4 space-y-3 rounded-md border border-border bg-muted/40 p-4 text-sm text-foreground">
               <p>{dealerError}</p>
