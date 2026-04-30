@@ -22,6 +22,12 @@ const Login = () => {
     }
   }, [loading, user, dealer, navigate]);
 
+  useEffect(() => {
+    if (!loading) {
+      setSubmitting(false);
+    }
+  }, [loading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
