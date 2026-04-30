@@ -26,11 +26,12 @@ const Login = () => {
     e.preventDefault();
     setSubmitting(true);
     const { error } = await signIn(email.trim(), password);
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast({ variant: "destructive", title: "No se ha podido iniciar sesión", description: error });
       return;
     }
+    // El AuthProvider terminará de cargar el dealer; el useEffect de arriba redirige cuando esté listo.
   };
 
   return (
