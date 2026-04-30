@@ -10,7 +10,7 @@ import { Logo } from "@/components/garanticon/Logo";
 import { toast } from "@/components/ui/use-toast";
 
 const Login = () => {
-  const { signIn, user, dealer, loading } = useAuth();
+  const { signIn, user, dealer, dealerError, loading, refreshDealer } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +22,12 @@ const Login = () => {
     }
   }, [loading, user, dealer, navigate]);
 
+  useEffect(() => {
+    if (!loading) {
+      setSubmitting(false);
+    }
+  }, [loading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -32,6 +38,12 @@ const Login = () => {
       return;
     }
     // El AuthProvider terminará de cargar el dealer; el useEffect de arriba redirige cuando esté listo.
+  };
+
+  const handleRetry = async () => {
+    setSubmitting(true);
+    await refreshDealer();
+    setSubmitting(false);
   };
 
   return (
@@ -71,12 +83,20 @@ const Login = () => {
             </div>
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || loading}
               className="w-full rounded-full bg-primary font-semibold text-primary-foreground hover:brightness-110"
             >
               {submitting ? <Loader2 className="animate-spin" /> : "Entrar"}
             </Button>
           </form>
+          {!loading && user && !dealer && dealerError && (
+            <div className="mt-4 space-y-3 rounded-md border border-border bg-muted/40 p-4 text-sm text-foreground">
+              <p>{dealerError}</p>
+              <Button type="button" variant="outline" className="w-full" onClick={handleRetry} disabled={submitting}>
+                {submitting ? <Loader2 className="animate-spin" /> : "Reintentar acceso"}
+              </Button>
+            </div>
+          )}
           <p className="mt-6 text-center text-sm text-muted-foreground">
             ¿Problemas para entrar?{" "}
             <a href="mailto:contacto@garanticon.es" className="font-medium text-primary hover:underline">

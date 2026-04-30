@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,6 +16,7 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   dealer: DealerInfo | null;
+  dealerError: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -28,13 +29,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [dealer, setDealer] = useState<DealerInfo | null>(null);
+  const [dealerError, setDealerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const inFlightSessionKey = useRef<string | null>(null);
+  const resolvedSessionKey = useRef<string | null>(null);
 
   const loadDealer = async (userId: string, options?: { retries?: number; delayMs?: number }) => {
     const retries = options?.retries ?? 8;
     const delayMs = options?.delayMs ?? 300;
 
     let dealerData: DealerInfo | null = null;
+    let lastError: string | null = null;
 
     for (let attempt = 0; attempt < retries; attempt += 1) {
       const { data, error } = await supabase
@@ -57,12 +62,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         break;
       }
 
+      if (error.code === "PGRST002" || error.message.toLowerCase().includes("schema cache")) {
+        lastError = "El backend está respondiendo con retraso y no ha podido cargar tu concesionario todavía.";
+      } else {
+        lastError = "No se ha podido cargar tu concesionario asociado.";
+      }
+
       if (attempt < retries - 1) {
         await wait(delayMs * (attempt + 1));
       }
     }
 
-    return dealerData;
+    return {
+      dealer: dealerData,
+      error: dealerData ? null : lastError,
+    };
   };
 
   useEffect(() => {
@@ -70,16 +84,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const syncAuthState = async (sess: Session | null) => {
       if (cancelled) return;
+      const sessionKey = sess?.access_token ?? sess?.user?.id ?? "anon";
+
+      if (inFlightSessionKey.current === sessionKey || resolvedSessionKey.current === sessionKey) {
+        setSession(sess);
+        setUser(sess?.user ?? null);
+        setLoading(false);
+        return;
+      }
+
+      inFlightSessionKey.current = sessionKey;
+      setLoading(true);
       setSession(sess);
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        const d = await loadDealer(sess.user.id);
+        setDealerError(null);
+        const { dealer: loadedDealer, error } = await loadDealer(sess.user.id);
         if (cancelled) return;
-        setDealer(d);
+        setDealer(loadedDealer);
+        setDealerError(error);
+        resolvedSessionKey.current = sessionKey;
+        inFlightSessionKey.current = null;
         setLoading(false);
       } else {
         setDealer(null);
+        setDealerError(null);
+        resolvedSessionKey.current = sessionKey;
+        inFlightSessionKey.current = null;
         setLoading(false);
       }
     };
@@ -103,6 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
+    setDealerError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
@@ -115,21 +148,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     await supabase.auth.signOut();
+    inFlightSessionKey.current = null;
+    resolvedSessionKey.current = null;
     setSession(null);
     setUser(null);
     setDealer(null);
+    setDealerError(null);
     setLoading(false);
   };
 
   const refreshDealer = async () => {
     if (user) {
-      const d = await loadDealer(user.id);
-      setDealer(d);
+      setLoading(true);
+      setDealerError(null);
+      resolvedSessionKey.current = null;
+      const { dealer: loadedDealer, error } = await loadDealer(user.id);
+      setDealer(loadedDealer);
+      setDealerError(error);
+      setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, dealer, loading, signIn, signOut, refreshDealer }}>
+    <AuthContext.Provider value={{ user, session, dealer, dealerError, loading, signIn, signOut, refreshDealer }}>
       {children}
     </AuthContext.Provider>
   );
