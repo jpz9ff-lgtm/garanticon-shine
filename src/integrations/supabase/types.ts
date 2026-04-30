@@ -14,16 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          matricula: string | null
+          mensaje: string
+          nombre: string | null
+          numero_poliza: string | null
+          respondido: boolean
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          matricula?: string | null
+          mensaje: string
+          nombre?: string | null
+          numero_poliza?: string | null
+          respondido?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          matricula?: string | null
+          mensaje?: string
+          nombre?: string | null
+          numero_poliza?: string | null
+          respondido?: boolean
+        }
+        Relationships: []
+      }
+      dealers: {
+        Row: {
+          activo: boolean
+          cif: string
+          created_at: string
+          direccion: string | null
+          email: string
+          id: string
+          nombre_empresa: string
+          telefono: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activo?: boolean
+          cif: string
+          created_at?: string
+          direccion?: string | null
+          email: string
+          id?: string
+          nombre_empresa: string
+          telefono?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activo?: boolean
+          cif?: string
+          created_at?: string
+          direccion?: string | null
+          email?: string
+          id?: string
+          nombre_empresa?: string
+          telefono?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      warranties: {
+        Row: {
+          bastidor: string | null
+          combustible: string | null
+          comprador_cp: string | null
+          comprador_direccion: string | null
+          comprador_dni: string
+          comprador_email: string | null
+          comprador_nombre: string
+          comprador_poblacion: string | null
+          comprador_provincia: string | null
+          comprador_telefono: string | null
+          created_at: string
+          dealer_id: string
+          estado: Database["public"]["Enums"]["warranty_status"]
+          fecha_fin: string
+          fecha_inicio: string
+          fecha_matriculacion: string | null
+          fecha_venta: string
+          id: string
+          km_venta: number | null
+          limite_averia: number
+          matricula: string
+          modalidad: Database["public"]["Enums"]["warranty_modality"]
+          numero_poliza: string
+          precio_venta: number | null
+          tipo_cambio: string | null
+          traccion_4x4: boolean
+          updated_at: string
+          vehiculo_marca: string
+          vehiculo_modelo: string
+        }
+        Insert: {
+          bastidor?: string | null
+          combustible?: string | null
+          comprador_cp?: string | null
+          comprador_direccion?: string | null
+          comprador_dni: string
+          comprador_email?: string | null
+          comprador_nombre: string
+          comprador_poblacion?: string | null
+          comprador_provincia?: string | null
+          comprador_telefono?: string | null
+          created_at?: string
+          dealer_id: string
+          estado?: Database["public"]["Enums"]["warranty_status"]
+          fecha_fin: string
+          fecha_inicio: string
+          fecha_matriculacion?: string | null
+          fecha_venta: string
+          id?: string
+          km_venta?: number | null
+          limite_averia: number
+          matricula: string
+          modalidad: Database["public"]["Enums"]["warranty_modality"]
+          numero_poliza: string
+          precio_venta?: number | null
+          tipo_cambio?: string | null
+          traccion_4x4?: boolean
+          updated_at?: string
+          vehiculo_marca: string
+          vehiculo_modelo: string
+        }
+        Update: {
+          bastidor?: string | null
+          combustible?: string | null
+          comprador_cp?: string | null
+          comprador_direccion?: string | null
+          comprador_dni?: string
+          comprador_email?: string | null
+          comprador_nombre?: string
+          comprador_poblacion?: string | null
+          comprador_provincia?: string | null
+          comprador_telefono?: string | null
+          created_at?: string
+          dealer_id?: string
+          estado?: Database["public"]["Enums"]["warranty_status"]
+          fecha_fin?: string
+          fecha_inicio?: string
+          fecha_matriculacion?: string | null
+          fecha_venta?: string
+          id?: string
+          km_venta?: number | null
+          limite_averia?: number
+          matricula?: string
+          modalidad?: Database["public"]["Enums"]["warranty_modality"]
+          numero_poliza?: string
+          precio_venta?: number | null
+          tipo_cambio?: string | null
+          traccion_4x4?: boolean
+          updated_at?: string
+          vehiculo_marca?: string
+          vehiculo_modelo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranties_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_poliza_number: { Args: never; Returns: string }
+      get_dealer_id_for_user: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "dealer"
+      warranty_modality: "PLUS" | "BASIC"
+      warranty_status: "activa" | "expirada" | "cancelada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +356,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "dealer"],
+      warranty_modality: ["PLUS", "BASIC"],
+      warranty_status: ["activa", "expirada", "cancelada"],
+    },
   },
 } as const
