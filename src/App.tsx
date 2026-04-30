@@ -9,6 +9,8 @@ import PolicyArea from "./pages/PolicyArea.tsx";
 import AssistanceArea from "./pages/AssistanceArea.tsx";
 import ProfessionalsArea from "./pages/ProfessionalsArea.tsx";
 import Login from "./pages/Login.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import DealerDashboard from "./pages/dealer/DealerDashboard.tsx";
 import NewWarranty from "./pages/dealer/NewWarranty.tsx";
 import WarrantyDetail from "./pages/dealer/WarrantyDetail.tsx";
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/asistencia" element={<AssistanceArea />} />
             <Route path="/profesionales" element={<ProfessionalsArea />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/dealer/dashboard"
               element={<ProtectedRoute><DealerDashboard /></ProtectedRoute>}
