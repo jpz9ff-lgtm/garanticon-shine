@@ -10,6 +10,8 @@ interface DealerInfo {
   activo: boolean;
 }
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
@@ -28,15 +30,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [dealer, setDealer] = useState<DealerInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadDealer = async (userId: string) => {
-    const { data } = await supabase
-      .from("dealers")
-      .select("id, nombre_empresa, cif, email, activo")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const dealerData = data ?? null;
+  const loadDealer = async (userId: string, options?: { retries?: number; delayMs?: number }) => {
+    const retries = options?.retries ?? 6;
+    const delayMs = options?.delayMs ?? 400;
+
+    let dealerData: DealerInfo | null = null;
+
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      const { data, error } = await supabase
+        .from("dealers")
+        .select("id, nombre_empresa, cif, email, activo")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (data) {
+        dealerData = data as DealerInfo;
+        break;
+      }
+
+      if (!error) {
+        break;
+      }
+
+      if (attempt < retries - 1) {
+        await wait(delayMs * (attempt + 1));
+      }
+    }
+
     setDealer(dealerData);
-    return dealerData as DealerInfo | null;
+    return dealerData;
   };
 
   useEffect(() => {
@@ -81,17 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(data.user ?? null);
 
     if (data.user) {
-      // Pequeño retry: a veces el JWT tarda un instante en aplicarse al cliente PostgREST
-      let d: DealerInfo | null = null;
-      for (let i = 0; i < 4; i++) {
-        const { data: row } = await supabase
-          .from("dealers")
-          .select("id, nombre_empresa, cif, email, activo")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-        if (row) { d = row as DealerInfo; break; }
-        await new Promise((r) => setTimeout(r, 200));
-      }
+      const d = await loadDealer(data.user.id, { retries: 8, delayMs: 500 });
       if (!d) {
         await supabase.auth.signOut();
         setLoading(false);
