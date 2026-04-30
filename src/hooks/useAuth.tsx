@@ -31,8 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const loadDealer = async (userId: string, options?: { retries?: number; delayMs?: number }) => {
-    const retries = options?.retries ?? 6;
-    const delayMs = options?.delayMs ?? 400;
+    const retries = options?.retries ?? 8;
+    const delayMs = options?.delayMs ?? 300;
 
     let dealerData: DealerInfo | null = null;
 
@@ -49,6 +49,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (!error) {
+        // No row yet — wait and retry in case of replication lag right after signup
+        if (attempt < retries - 1) {
+          await wait(delayMs * (attempt + 1));
+          continue;
+        }
         break;
       }
 
@@ -57,18 +62,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    setDealer(dealerData);
     return dealerData;
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const syncAuthState = async (sess: Session | null) => {
+      if (cancelled) return;
       setSession(sess);
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        setLoading(true);
-        await loadDealer(sess.user.id);
+        const d = await loadDealer(sess.user.id);
+        if (cancelled) return;
+        setDealer(d);
         setLoading(false);
       } else {
         setDealer(null);
@@ -76,48 +84,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // 1) listener primero
     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+      // Defer to avoid deadlocks inside the auth callback
       setTimeout(() => {
         void syncAuthState(sess);
       }, 0);
     });
 
-    // 2) luego sesión actual
     supabase.auth.getSession().then(({ data: { session: sess } }) => {
       void syncAuthState(sess);
     });
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
       return { error: error.message };
     }
-
-    setSession(data.session ?? null);
-    setUser(data.user ?? null);
-
-    if (data.user) {
-      const d = await loadDealer(data.user.id, { retries: 8, delayMs: 500 });
-      if (!d) {
-        await supabase.auth.signOut();
-        setLoading(false);
-        return { error: "Esta cuenta no tiene un dealer asociado. Contacta con garanticon.es" };
-      }
-      if (!d.activo) {
-        await supabase.auth.signOut();
-        setLoading(false);
-        return { error: "Cuenta desactivada. Contacta con garanticon.es" };
-      }
-      setDealer(d);
-    }
-
-    setLoading(false);
+    // El listener onAuthStateChange se encargará de cargar el dealer y poner loading=false.
     return { error: null };
   };
 
@@ -131,7 +122,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshDealer = async () => {
-    if (user) await loadDealer(user.id);
+    if (user) {
+      const d = await loadDealer(user.id);
+      setDealer(d);
+    }
   };
 
   return (
