@@ -68,11 +68,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
     if (data.user) {
-      const { data: d } = await supabase
-        .from("dealers")
-        .select("id, nombre_empresa, cif, email, activo")
-        .eq("user_id", data.user.id)
-        .maybeSingle();
+      // Pequeño retry: a veces el JWT tarda un instante en aplicarse al cliente PostgREST
+      let d: DealerInfo | null = null;
+      for (let i = 0; i < 4; i++) {
+        const { data: row } = await supabase
+          .from("dealers")
+          .select("id, nombre_empresa, cif, email, activo")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (row) { d = row as DealerInfo; break; }
+        await new Promise((r) => setTimeout(r, 200));
+      }
       if (!d) {
         await supabase.auth.signOut();
         return { error: "Esta cuenta no tiene un dealer asociado. Contacta con garanticon.es" };
