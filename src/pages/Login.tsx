@@ -12,7 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 const Login = () => {
   const { signIn, user, dealer, dealerError, loading, refreshDealer } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -31,7 +31,26 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const { error } = await signIn(email.trim(), password);
+    let loginEmail = identifier.trim();
+    if (loginEmail && !loginEmail.includes("@")) {
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke("resolve-username", {
+          body: { username: loginEmail },
+        });
+        if (fnErr) throw fnErr;
+        if (!data?.email) {
+          setSubmitting(false);
+          toast({ variant: "destructive", title: "Usuario no encontrado", description: "Revisa el nombre de usuario o usa tu email." });
+          return;
+        }
+        loginEmail = data.email;
+      } catch {
+        setSubmitting(false);
+        toast({ variant: "destructive", title: "Error de conexión", description: "Inténtalo de nuevo en unos segundos." });
+        return;
+      }
+    }
+    const { error } = await signIn(loginEmail, password);
     if (error) {
       setSubmitting(false);
       toast({ variant: "destructive", title: "No se ha podido iniciar sesión", description: error });
@@ -60,14 +79,14 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Usuario o email</Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
+                id="identifier"
+                type="text"
+                autoComplete="username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
               />
             </div>
             <div className="space-y-2">
