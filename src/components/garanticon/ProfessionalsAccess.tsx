@@ -13,17 +13,17 @@ const inputCls =
 
 export const ProfessionalsAccess = () => {
   const navigate = useNavigate();
-  const { signIn, user, dealer, loading } = useAuth();
+  const { signIn, user, loading } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && user && dealer) {
+    if (!loading && user) {
       navigate("/dealer/dashboard", { replace: true });
     }
-  }, [dealer, loading, navigate, user]);
+  }, [loading, navigate, user]);
 
   useEffect(() => {
     if (!loading) {
