@@ -59,6 +59,7 @@ export type Database = {
           telefono: string | null
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           activo?: boolean
@@ -71,6 +72,7 @@ export type Database = {
           telefono?: string | null
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           activo?: boolean
@@ -83,6 +85,7 @@ export type Database = {
           telefono?: string | null
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }

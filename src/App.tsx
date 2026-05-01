@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import DealerDashboard from "./pages/dealer/DealerDashboard.tsx";
 import NewWarranty from "./pages/dealer/NewWarranty.tsx";
 import WarrantyDetail from "./pages/dealer/WarrantyDetail.tsx";
+import DealerAccount from "./pages/dealer/DealerAccount.tsx";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/dealer/ProtectedRoute";
 
@@ -45,6 +46,10 @@ const App = () => (
             <Route
               path="/dealer/garantia/:id"
               element={<ProtectedRoute><WarrantyDetail /></ProtectedRoute>}
+            />
+            <Route
+              path="/dealer/cuenta"
+              element={<ProtectedRoute><DealerAccount /></ProtectedRoute>}
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, LayoutDashboard } from "lucide-react";
+import { LogOut, LayoutDashboard, UserCog } from "lucide-react";
 import { Logo } from "@/components/garanticon/Logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,11 @@ export const DealerHeader = () => {
           <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
             <Link to="/dealer/dashboard">
               <LayoutDashboard className="mr-1" /> Panel
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
+            <Link to="/dealer/cuenta">
+              <UserCog className="mr-1" /> Mi cuenta
             </Link>
           </Button>
           <Button variant="outline" size="sm" onClick={handleSignOut}>
