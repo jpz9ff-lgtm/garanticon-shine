@@ -20,10 +20,10 @@ export const ProfessionalsAccess = () => {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       navigate("/dealer/dashboard", { replace: true });
     }
-  }, [loading, navigate, user]);
+  }, [navigate, user]);
 
   useEffect(() => {
     if (!loading) {
@@ -88,6 +88,8 @@ export const ProfessionalsAccess = () => {
           title: "No se ha podido iniciar sesión",
           description: error,
         });
+      } else {
+        navigate("/dealer/dashboard", { replace: true });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Inténtalo de nuevo en unos segundos.";
