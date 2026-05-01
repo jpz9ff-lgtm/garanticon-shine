@@ -59,6 +59,7 @@ export type Database = {
           telefono: string | null
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           activo?: boolean
@@ -71,6 +72,7 @@ export type Database = {
           telefono?: string | null
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           activo?: boolean
@@ -83,6 +85,7 @@ export type Database = {
           telefono?: string | null
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -218,6 +221,7 @@ export type Database = {
     Functions: {
       generate_poliza_number: { Args: never; Returns: string }
       get_dealer_id_for_user: { Args: { _user_id: string }; Returns: string }
+      get_email_by_username: { Args: { _username: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
