@@ -137,7 +137,7 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
   text(t(data.vendedor_cif, 20), 430, 597);
 
   const bytes = await out.save();
-  return new Blob([bytes], { type: "application/pdf" });
+  return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
