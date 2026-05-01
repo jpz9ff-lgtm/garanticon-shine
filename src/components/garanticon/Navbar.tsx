@@ -10,10 +10,9 @@ interface NavbarProps {
 }
 
 const links = [
-  { id: "hero", label: "Inicio" },
-  { id: "lookup", label: "Mi póliza" },
+  { id: "lookup", label: "Particulares" },
+  { id: "professionals", label: "Concesionarios" },
   { id: "assistance", label: "Asistencia" },
-  { id: "professionals", label: "Profesionales" },
 ];
 
 export const Navbar = ({ onNavigate }: NavbarProps) => {
@@ -73,10 +72,10 @@ export const Navbar = ({ onNavigate }: NavbarProps) => {
 
         <div className="hidden md:block">
           <Button
-            onClick={() => handleNav("lookup")}
+            onClick={() => handleNav("assistance")}
             className="rounded-full bg-primary px-6 font-semibold text-primary-foreground shadow-soft transition-all hover:scale-105 hover:brightness-110"
           >
-            Consultar
+            Contacto
           </Button>
         </div>
 
@@ -111,10 +110,10 @@ export const Navbar = ({ onNavigate }: NavbarProps) => {
             ))}
             <li className="pt-2">
               <Button
-                onClick={() => handleNav("lookup")}
+                onClick={() => handleNav("assistance")}
                 className="w-full rounded-full bg-primary font-semibold text-primary-foreground"
               >
-                Consultar
+                Contacto
               </Button>
             </li>
           </ul>
