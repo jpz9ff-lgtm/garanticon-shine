@@ -136,13 +136,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     setDealerError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setLoading(false);
+        return { error: error.message };
+      }
+
+      // El listener onAuthStateChange se encargará de cargar el dealer y poner loading=false.
+      return { error: null };
+    } catch (error) {
+      console.error("Auth signInWithPassword failed", error);
       setLoading(false);
-      return { error: error.message };
+      return {
+        error: error instanceof Error ? error.message : "No se ha podido conectar con el servicio de acceso.",
+      };
     }
-    // El listener onAuthStateChange se encargará de cargar el dealer y poner loading=false.
-    return { error: null };
   };
 
   const signOut = async () => {
