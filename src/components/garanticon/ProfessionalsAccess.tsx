@@ -17,6 +17,7 @@ export const ProfessionalsAccess = () => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user && dealer) {
@@ -31,50 +32,74 @@ export const ProfessionalsAccess = () => {
   }, [loading]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.log("Login clicked");
     e.preventDefault();
+    if (submitting) return;
+
+    const trimmedIdentifier = identifier.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedIdentifier || !trimmedPassword) {
+      const message = "Introduce tu usuario o email y tu contraseña.";
+      setFormError(message);
+      toast({
+        variant: "destructive",
+        title: "Faltan datos",
+        description: message,
+      });
+      return;
+    }
+
+    setFormError(null);
     setSubmitting(true);
 
-    let loginEmail = identifier.trim();
+    let loginEmail = trimmedIdentifier;
 
-    if (loginEmail && !loginEmail.includes("@")) {
-      try {
+    try {
+      if (!loginEmail.includes("@")) {
         const { data, error: fnErr } = await supabase.functions.invoke("resolve-username", {
           body: { username: loginEmail },
         });
 
-        if (fnErr) throw fnErr;
+        if (fnErr) {
+          throw new Error(fnErr.message || "No se ha podido resolver el usuario.");
+        }
 
         if (!data?.email) {
-          setSubmitting(false);
+          const message = "Revisa el nombre de usuario o usa tu email.";
+          setFormError(message);
           toast({
             variant: "destructive",
             title: "Usuario no encontrado",
-            description: "Revisa el nombre de usuario o usa tu email.",
+            description: message,
           });
           return;
         }
 
         loginEmail = data.email;
-      } catch {
-        setSubmitting(false);
+      }
+
+      const { error } = await signIn(loginEmail, trimmedPassword);
+
+      if (error) {
+        setFormError(error);
         toast({
           variant: "destructive",
-          title: "Error de conexión",
-          description: "Inténtalo de nuevo en unos segundos.",
+          title: "No se ha podido iniciar sesión",
+          description: error,
         });
-        return;
       }
-    }
-
-    const { error } = await signIn(loginEmail, password);
-
-    if (error) {
-      setSubmitting(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Inténtalo de nuevo en unos segundos.";
+      console.error("Professional login failed", error);
+      setFormError(message);
       toast({
         variant: "destructive",
-        title: "No se ha podido iniciar sesión",
-        description: error,
+        title: "Error al iniciar sesión",
+        description: message,
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -124,6 +149,7 @@ export const ProfessionalsAccess = () => {
             >
               {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
             </Button>
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
             <Button
               type="button"
               variant="outline"
