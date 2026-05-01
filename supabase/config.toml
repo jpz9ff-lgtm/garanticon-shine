@@ -1,1 +1,4 @@
 project_id = "lrrywberisrqwyfzyhfj"
+
+[functions.lookup-warranty]
+verify_jwt = false

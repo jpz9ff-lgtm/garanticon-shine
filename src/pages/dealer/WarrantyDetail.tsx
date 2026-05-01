@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { DealerHeader } from "@/components/dealer/DealerHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
+import { generateContractPdf, downloadBlob } from "@/lib/contract-pdf";
 
 type W = {
   id: string; numero_poliza: string;
@@ -25,8 +27,10 @@ type W = {
 
 const WarrantyDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { dealer } = useAuth();
   const [w, setW] = useState<W | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -39,6 +43,23 @@ const WarrantyDetail = () => {
 
   const fmt = (d?: string | null) => d ? format(new Date(d), "dd/MM/yyyy", { locale: es }) : "-";
 
+  const handleDownload = async () => {
+    if (!w) return;
+    setDownloading(true);
+    try {
+      const blob = await generateContractPdf({
+        ...w,
+        vendedor_empresa: dealer?.nombre_empresa,
+        vendedor_cif: dealer?.cif,
+      });
+      downloadBlob(blob, `Garanticon_${w.numero_poliza}.pdf`);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e?.message ?? "No se pudo generar el PDF" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-muted/20">
       <DealerHeader />
@@ -48,10 +69,13 @@ const WarrantyDetail = () => {
             <Link to="/dealer/dashboard"><ArrowLeft className="mr-1" /> Volver al panel</Link>
           </Button>
           <Button
-            onClick={() => toast({ title: "Generación de PDF", description: "Disponible en el siguiente paso." })}
+            onClick={handleDownload}
+            disabled={!w || downloading}
             className="bg-primary text-primary-foreground hover:brightness-110"
           >
-            <Printer className="mr-1" /> Imprimir contrato
+            {downloading
+              ? <><Loader2 className="mr-1 animate-spin" /> Generando…</>
+              : <><Download className="mr-1" /> Descargar contrato (PDF)</>}
           </Button>
         </div>
 
