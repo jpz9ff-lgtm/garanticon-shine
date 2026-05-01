@@ -18,10 +18,10 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && dealer) {
+    if (user) {
       navigate("/dealer/dashboard", { replace: true });
     }
-  }, [loading, user, dealer, navigate]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (!loading) {
@@ -57,7 +57,7 @@ const Login = () => {
       toast({ variant: "destructive", title: "No se ha podido iniciar sesión", description: error });
       return;
     }
-    // El AuthProvider terminará de cargar el dealer; el useEffect de arriba redirige cuando esté listo.
+    navigate("/dealer/dashboard", { replace: true });
   };
 
   const handleRetry = async () => {
