@@ -93,7 +93,7 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
     !s ? "" : s.length > max ? s.slice(0, max - 1) + "…" : String(s);
 
   // ============= CABECERA =============
-  text(data.numero_poliza, W - 130, 70, { size: 10, bold: true, color: ORANGE });
+  text(data.numero_poliza, W - 130, 78, { size: 10, bold: true, color: ORANGE });
 
   // ============= FECHAS =============
   // Sobre las líneas grises bajo "FECHA DE VENTA / INICIO DE COBERTURA / FIN DE COBERTURA"
@@ -102,17 +102,17 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
   text(fmtDate(data.fecha_fin), 488, 138, { size: 10, bold: true });
 
   // ============= DATOS COMPRADOR =============
-  text(t(data.comprador_nombre, 55), 60, 222);
-  text(t(data.comprador_dni, 18), 430, 222);
+  text(t(data.comprador_nombre, 55), 60, 230);
+  text(t(data.comprador_dni, 18), 430, 230);
 
-  text(t(data.comprador_telefono, 22), 60, 246);
-  text(t(data.comprador_email, 45), 240, 246);
+  text(t(data.comprador_telefono, 22), 60, 257);
+  text(t(data.comprador_email, 45), 240, 257);
 
-  text(t(data.comprador_direccion, 75), 60, 270);
-  text(t(data.comprador_cp, 8), 460, 270);
+  text(t(data.comprador_direccion, 75), 60, 283);
+  text(t(data.comprador_cp, 8), 460, 283);
 
-  text(t(data.comprador_poblacion, 38), 60, 293);
-  text(t(data.comprador_provincia, 38), 360, 293);
+  text(t(data.comprador_poblacion, 38), 60, 309);
+  text(t(data.comprador_provincia, 38), 360, 309);
 
   // ============= DATOS VEHÍCULO =============
   text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 342);
