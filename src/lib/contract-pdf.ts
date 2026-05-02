@@ -137,7 +137,9 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
   text(t(data.vendedor_cif, 20), 430, 597);
 
   const bytes = await out.save();
-  return new Blob([bytes as BlobPart], { type: "application/pdf" });
+  // Copia a un ArrayBuffer "limpio" para máxima compatibilidad con Blob
+  const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return new Blob([ab], { type: "application/pdf" });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
@@ -145,8 +147,13 @@ export function downloadBlob(blob: Blob, filename: string) {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  a.target = "_self";
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Pequeño retraso antes de limpiar para evitar cancelaciones en algunos navegadores
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
