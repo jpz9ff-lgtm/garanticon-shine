@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DealerHeader } from "@/components/dealer/DealerHeader";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ type Warranty = {
 };
 
 const DealerDashboard = () => {
-  const { dealer } = useAuth();
+  const { dealer, dealerError, refreshDealer } = useAuth();
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -38,7 +39,12 @@ const DealerDashboard = () => {
   const [estado, setEstado] = useState<string>("all");
 
   useEffect(() => {
-    if (!dealer) return;
+    if (!dealer) {
+      setWarranties([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     supabase
       .from("warranties")
@@ -85,12 +91,24 @@ const DealerDashboard = () => {
     <div className="min-h-screen bg-muted/20">
       <DealerHeader />
       <main className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+        {!dealer && (
+          <Alert>
+            <AlertTitle>No hemos podido cargar la ficha del profesional</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <span>{dealerError ?? "Tu sesión está iniciada, pero el backend todavía no ha devuelto los datos de la empresa."}</span>
+              <Button type="button" variant="outline" onClick={() => void refreshDealer()}>
+                Reintentar
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">Panel del Dealer</h1>
-            <p className="text-muted-foreground">Bienvenido, {dealer?.nombre_empresa}</p>
+            <p className="text-muted-foreground">Bienvenido, {dealer?.nombre_empresa ?? "área profesional"}</p>
           </div>
-          <Button asChild size="lg" className="rounded-full bg-primary font-semibold text-primary-foreground hover:brightness-110">
+          <Button asChild size="lg" disabled={!dealer} className="rounded-full bg-primary font-semibold text-primary-foreground hover:brightness-110">
             <Link to="/dealer/nueva">
               <Plus className="mr-1" /> Nueva Garantía
             </Link>
