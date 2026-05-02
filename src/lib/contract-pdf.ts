@@ -93,76 +93,66 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
     !s ? "" : s.length > max ? s.slice(0, max - 1) + "…" : String(s);
 
   // ============= CABECERA =============
-  // Nº certificado (esquina sup. derecha, debajo de "Nº CERTIFICADO")
-  text(data.numero_poliza, W - 130, 50, { size: 10, bold: true, color: ORANGE });
+  text(data.numero_poliza, W - 130, 56, { size: 10, bold: true, color: ORANGE });
 
   // ============= FECHAS =============
-  // Fila bajo etiquetas FECHA VENTA / INICIO / FIN (líneas grises)
-  text(fmtDate(data.fecha_venta), 130, 188, { size: 10, bold: true });
-  text(fmtDate(data.fecha_inicio), 380, 188, { size: 10, bold: true });
-  text(fmtDate(data.fecha_fin), 625, 188, { size: 10, bold: true });
+  // Sobre las líneas grises bajo "FECHA DE VENTA / INICIO DE COBERTURA / FIN DE COBERTURA"
+  text(fmtDate(data.fecha_venta), 138, 138, { size: 10, bold: true });
+  text(fmtDate(data.fecha_inicio), 327, 138, { size: 10, bold: true });
+  text(fmtDate(data.fecha_fin), 525, 138, { size: 10, bold: true });
 
   // ============= DATOS COMPRADOR =============
-  // Nombre / DNI
-  text(t(data.comprador_nombre, 60), 60, 305);
-  text(t(data.comprador_dni, 18), 580, 305);
+  text(t(data.comprador_nombre, 55), 60, 227);
+  text(t(data.comprador_dni, 18), 430, 227);
 
-  // Teléfono / Email
-  text(t(data.comprador_telefono, 22), 60, 350);
-  text(t(data.comprador_email, 50), 320, 350);
+  text(t(data.comprador_telefono, 22), 60, 252);
+  text(t(data.comprador_email, 45), 240, 252);
 
-  // Dirección / CP
-  text(t(data.comprador_direccion, 75), 60, 393);
-  text(t(data.comprador_cp, 8), 600, 393);
+  text(t(data.comprador_direccion, 75), 60, 277);
+  text(t(data.comprador_cp, 8), 460, 277);
 
-  // Población / Provincia
-  text(t(data.comprador_poblacion, 38), 60, 437);
-  text(t(data.comprador_provincia, 38), 480, 437);
+  text(t(data.comprador_poblacion, 38), 60, 302);
+  text(t(data.comprador_provincia, 38), 360, 302);
 
   // ============= DATOS VEHÍCULO =============
-  // Marca y modelo / Matrícula
-  text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 540);
-  text(t(data.matricula, 12), 580, 540);
+  text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 342);
+  text(t(data.matricula, 12), 430, 342);
 
-  // Nº Bastidor / Fecha 1ª matric. / Km en venta
-  text(t(data.bastidor, 22), 60, 583);
-  text(fmtDate(data.fecha_matriculacion), 405, 583);
+  text(t(data.bastidor, 22), 60, 366);
+  text(fmtDate(data.fecha_matriculacion), 320, 366);
   text(
     data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")}` : "",
-    605,
-    583,
+    490,
+    366,
   );
 
-  // Precio venta · (combustible/cambio/4x4 sólo se marcan con X abajo)
   text(
     data.precio_venta != null ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "",
     60,
-    627,
+    392,
   );
+  text(data.traccion_4x4 ? "Sí" : "No", 510, 392);
 
   // ============= CHECKBOXES =============
   const X = (x: number, y: number) =>
     text("X", x, y, { size: 12, bold: true, color: ORANGE });
 
-  // Combustible: Gasolina, Diésel, Híbrido, Eléctrico (línea de checkboxes)
+  // Línea "Combustible: [] Gasolina  [] Diésel  [] Híbrido  [] Eléctrico   Cambio: [] Manual  [] Automático"
   const fuelMap: Record<string, number> = {
-    Gasolina: 161,
-    "Diésel": 240,
-    "Híbrido": 313,
-    "Eléctrico": 387,
+    Gasolina: 175,
+    "Diésel": 261,
+    "Híbrido": 348,
+    "Eléctrico": 434,
   };
   const fx = fuelMap[data.combustible || ""];
-  if (fx) X(fx, 670);
+  if (fx) X(fx, 414);
 
-  // Cambio: Manual, Automático
-  if (data.tipo_cambio === "Manual") X(486, 670);
-  if (data.tipo_cambio === "Automático") X(573, 670);
+  if (data.tipo_cambio === "Manual") X(595, 414);
+  if (data.tipo_cambio === "Automático") X(692, 414);
 
   // ============= DATOS VENDEDOR =============
-  text(t(data.vendedor_empresa, 60), 60, 798);
-  text(t(data.vendedor_cif, 18), 580, 798);
-
-  // (No estampamos firma — espacio reservado para firma manuscrita)
+  text(t(data.vendedor_empresa, 60), 60, 528);
+  text(t(data.vendedor_cif, 18), 430, 528);
 
   const bytes = await out.save();
   const ab = new ArrayBuffer(bytes.byteLength);
