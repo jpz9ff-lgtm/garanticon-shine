@@ -138,7 +138,8 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
 
   const bytes = await out.save();
   // Copia a un ArrayBuffer "limpio" para máxima compatibilidad con Blob
-  const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const ab = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(ab).set(bytes);
   return new Blob([ab], { type: "application/pdf" });
 }
 
