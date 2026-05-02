@@ -111,8 +111,8 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
   text(t(data.comprador_direccion, 75), 60, 283);
   text(t(data.comprador_cp, 8), 460, 283);
 
-  text(t(data.comprador_poblacion, 38), 60, 300);
-  text(t(data.comprador_provincia, 38), 360, 300);
+  text(t(data.comprador_poblacion, 38), 60, 296);
+  text(t(data.comprador_provincia, 38), 360, 296);
 
   // ============= DATOS VEHÍCULO =============
   text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 342);
