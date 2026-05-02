@@ -84,7 +84,7 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
     errors[k] && <p className="text-xs font-medium text-destructive">{errors[k]}</p>;
 
   return (
-    <section id={embedded ? undefined : "assistance"} ref={ref} className={embedded ? "bg-background" : "bg-background px-6 py-24"}>
+    <section id={embedded ? "assistance-form" : "assistance"} ref={ref} className={embedded ? "bg-background" : "bg-background px-6 py-24"}>
       <div className="mx-auto max-w-3xl">
         {!embedded && (
           <motion.h2
