@@ -16,7 +16,7 @@ export const DealerHeader = () => {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
-        <Link to="/dealer/dashboard" className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3" aria-label="Ir a la página principal">
           <Logo size="sm" />
         </Link>
         <div className="flex items-center gap-3">

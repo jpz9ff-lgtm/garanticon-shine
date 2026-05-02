@@ -105,7 +105,7 @@ const DealerDashboard = () => {
 
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Panel del Dealer</h1>
+            <h1 className="text-2xl font-bold md:text-3xl">Panel Profesional</h1>
             <p className="text-muted-foreground">Bienvenido, {dealer?.nombre_empresa ?? "área profesional"}</p>
           </div>
           <Button asChild size="lg" disabled={!dealer} className="rounded-full bg-primary font-semibold text-primary-foreground hover:brightness-110">
