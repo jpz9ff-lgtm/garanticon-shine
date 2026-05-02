@@ -39,7 +39,12 @@ const DealerDashboard = () => {
   const [estado, setEstado] = useState<string>("all");
 
   useEffect(() => {
-    if (!dealer) return;
+    if (!dealer) {
+      setWarranties([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     supabase
       .from("warranties")
