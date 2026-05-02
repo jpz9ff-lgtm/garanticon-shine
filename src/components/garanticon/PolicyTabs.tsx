@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AssistanceForm } from "./AssistanceForm";
 import { WarrantyLookup, type LookupResult } from "./WarrantyLookup";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +9,7 @@ interface PolicyTabsProps {
 }
 
 export const PolicyTabs = ({ lookup, onResult }: PolicyTabsProps) => {
+  const [tab, setTab] = useState("policy");
   return (
     <section id="lookup" className="bg-background px-6 py-24">
       <div className="mx-auto max-w-4xl">
@@ -23,7 +25,7 @@ export const PolicyTabs = ({ lookup, onResult }: PolicyTabsProps) => {
           </p>
         </div>
 
-        <Tabs defaultValue="policy" className="w-full">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="grid h-auto w-full grid-cols-1 rounded-2xl bg-muted p-1 md:grid-cols-2">
             <TabsTrigger value="policy" className="rounded-xl px-4 py-4 text-base font-bold">
               Consulta el estado de tu póliza
@@ -34,7 +36,17 @@ export const PolicyTabs = ({ lookup, onResult }: PolicyTabsProps) => {
           </TabsList>
 
           <TabsContent value="policy" className="mt-8">
-            <WarrantyLookup onResult={onResult} onRequestAssistance={() => undefined} embedded />
+            <WarrantyLookup
+              onResult={onResult}
+              onRequestAssistance={() => {
+                setTab("assistance");
+                setTimeout(
+                  () => document.getElementById("assistance-form")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  150,
+                );
+              }}
+              embedded
+            />
           </TabsContent>
           <TabsContent id="assistance" value="assistance" className="mt-8">
             <AssistanceForm prefillPlate={lookup.plate} prefillPolicy={lookup.policy} embedded />
