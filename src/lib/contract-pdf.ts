@@ -93,26 +93,26 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
     !s ? "" : s.length > max ? s.slice(0, max - 1) + "…" : String(s);
 
   // ============= CABECERA =============
-  text(data.numero_poliza, W - 130, 56, { size: 10, bold: true, color: ORANGE });
+  text(data.numero_poliza, W - 130, 70, { size: 10, bold: true, color: ORANGE });
 
   // ============= FECHAS =============
   // Sobre las líneas grises bajo "FECHA DE VENTA / INICIO DE COBERTURA / FIN DE COBERTURA"
-  text(fmtDate(data.fecha_venta), 138, 138, { size: 10, bold: true });
-  text(fmtDate(data.fecha_inicio), 327, 138, { size: 10, bold: true });
-  text(fmtDate(data.fecha_fin), 525, 138, { size: 10, bold: true });
+  text(fmtDate(data.fecha_venta), 95, 138, { size: 10, bold: true });
+  text(fmtDate(data.fecha_inicio), 290, 138, { size: 10, bold: true });
+  text(fmtDate(data.fecha_fin), 488, 138, { size: 10, bold: true });
 
   // ============= DATOS COMPRADOR =============
-  text(t(data.comprador_nombre, 55), 60, 227);
-  text(t(data.comprador_dni, 18), 430, 227);
+  text(t(data.comprador_nombre, 55), 60, 222);
+  text(t(data.comprador_dni, 18), 430, 222);
 
-  text(t(data.comprador_telefono, 22), 60, 252);
-  text(t(data.comprador_email, 45), 240, 252);
+  text(t(data.comprador_telefono, 22), 60, 246);
+  text(t(data.comprador_email, 45), 240, 246);
 
-  text(t(data.comprador_direccion, 75), 60, 277);
-  text(t(data.comprador_cp, 8), 460, 277);
+  text(t(data.comprador_direccion, 75), 60, 270);
+  text(t(data.comprador_cp, 8), 460, 270);
 
-  text(t(data.comprador_poblacion, 38), 60, 302);
-  text(t(data.comprador_provincia, 38), 360, 302);
+  text(t(data.comprador_poblacion, 38), 60, 293);
+  text(t(data.comprador_provincia, 38), 360, 293);
 
   // ============= DATOS VEHÍCULO =============
   text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 342);
@@ -137,18 +137,18 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
   const X = (x: number, y: number) =>
     text("X", x, y, { size: 12, bold: true, color: ORANGE });
 
-  // Línea "Combustible: [] Gasolina  [] Diésel  [] Híbrido  [] Eléctrico   Cambio: [] Manual  [] Automático"
+  // Línea checkboxes (y≈408pt según plantilla)
   const fuelMap: Record<string, number> = {
-    Gasolina: 175,
-    "Diésel": 261,
-    "Híbrido": 348,
-    "Eléctrico": 434,
+    Gasolina: 117,
+    "Diésel": 178,
+    "Híbrido": 240,
+    "Eléctrico": 302,
   };
   const fx = fuelMap[data.combustible || ""];
-  if (fx) X(fx, 414);
+  if (fx) X(fx, 408);
 
-  if (data.tipo_cambio === "Manual") X(595, 414);
-  if (data.tipo_cambio === "Automático") X(692, 414);
+  if (data.tipo_cambio === "Manual") X(425, 408);
+  if (data.tipo_cambio === "Automático") X(491, 408);
 
   // ============= DATOS VENDEDOR =============
   text(t(data.vendedor_empresa, 60), 60, 528);
