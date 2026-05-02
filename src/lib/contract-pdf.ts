@@ -93,77 +93,76 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
     !s ? "" : s.length > max ? s.slice(0, max - 1) + "…" : String(s);
 
   // ============= CABECERA =============
-  // Nº certificado (esquina sup. derecha)
-  text(data.numero_poliza, W - 130, 60, { size: 10, bold: true, color: ORANGE });
+  // Nº certificado (esquina sup. derecha, debajo de "Nº CERTIFICADO")
+  text(data.numero_poliza, W - 130, 50, { size: 10, bold: true, color: ORANGE });
 
   // ============= FECHAS =============
-  // Fila bajo "MODALIDAD ... · Vehículos con menos de ..." → línea bajo etiquetas FECHA VENTA / INICIO / FIN
-  text(fmtDate(data.fecha_venta), 100, 145, { size: 10, bold: true });
-  text(fmtDate(data.fecha_inicio), 263, 145, { size: 10, bold: true });
-  text(fmtDate(data.fecha_fin), 423, 145, { size: 10, bold: true });
+  // Fila bajo etiquetas FECHA VENTA / INICIO / FIN (líneas grises)
+  text(fmtDate(data.fecha_venta), 130, 188, { size: 10, bold: true });
+  text(fmtDate(data.fecha_inicio), 380, 188, { size: 10, bold: true });
+  text(fmtDate(data.fecha_fin), 625, 188, { size: 10, bold: true });
 
   // ============= DATOS COMPRADOR =============
-  // Nombre (sobre la línea bajo "Nombre y apellidos / Razón social")
-  text(t(data.comprador_nombre, 60), 60, 220);
-  // DNI/NIF (a la derecha)
-  text(t(data.comprador_dni, 18), 430, 220);
+  // Nombre / DNI
+  text(t(data.comprador_nombre, 60), 60, 305);
+  text(t(data.comprador_dni, 18), 580, 305);
 
   // Teléfono / Email
-  text(t(data.comprador_telefono, 22), 60, 252);
-  text(t(data.comprador_email, 50), 245, 252);
+  text(t(data.comprador_telefono, 22), 60, 350);
+  text(t(data.comprador_email, 50), 320, 350);
 
   // Dirección / CP
-  text(t(data.comprador_direccion, 75), 60, 285);
-  text(t(data.comprador_cp, 8), 470, 285);
+  text(t(data.comprador_direccion, 75), 60, 393);
+  text(t(data.comprador_cp, 8), 600, 393);
 
   // Población / Provincia
-  text(t(data.comprador_poblacion, 38), 60, 318);
-  text(t(data.comprador_provincia, 38), 365, 318);
+  text(t(data.comprador_poblacion, 38), 60, 437);
+  text(t(data.comprador_provincia, 38), 480, 437);
 
   // ============= DATOS VEHÍCULO =============
   // Marca y modelo / Matrícula
-  text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 363);
-  text(t(data.matricula, 12), 430, 363);
+  text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 540);
+  text(t(data.matricula, 12), 580, 540);
 
   // Nº Bastidor / Fecha 1ª matric. / Km en venta
-  text(t(data.bastidor, 22), 60, 396);
-  text(fmtDate(data.fecha_matriculacion), 320, 396);
-  text(data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")}` : "", 460, 396);
+  text(t(data.bastidor, 22), 60, 583);
+  text(fmtDate(data.fecha_matriculacion), 405, 583);
+  text(
+    data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")}` : "",
+    605,
+    583,
+  );
 
-  // Precio de venta / Combustible (texto) / Tipo cambio (texto) / 4x4 (texto)
+  // Precio venta · (combustible/cambio/4x4 sólo se marcan con X abajo)
   text(
     data.precio_venta != null ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "",
     60,
-    428,
+    627,
   );
-  text(t(data.combustible, 12), 215, 428);
-  text(t(data.tipo_cambio, 12), 360, 428);
-  text(data.traccion_4x4 ? "Sí" : "No", 510, 428);
 
   // ============= CHECKBOXES =============
   const X = (x: number, y: number) =>
-    text("X", x, y, { size: 11, bold: true, color: ORANGE });
+    text("X", x, y, { size: 12, bold: true, color: ORANGE });
 
-  // Combustible: Gasolina, Diésel, Híbrido, Eléctrico
+  // Combustible: Gasolina, Diésel, Híbrido, Eléctrico (línea de checkboxes)
   const fuelMap: Record<string, number> = {
-    Gasolina: 178,
-    "Diésel": 251,
-    "Híbrido": 320,
-    "Eléctrico": 391,
+    Gasolina: 161,
+    "Diésel": 240,
+    "Híbrido": 313,
+    "Eléctrico": 387,
   };
   const fx = fuelMap[data.combustible || ""];
-  if (fx) X(fx, 458);
+  if (fx) X(fx, 670);
 
   // Cambio: Manual, Automático
-  if (data.tipo_cambio === "Manual") X(488, 458);
-  if (data.tipo_cambio === "Automático") X(572, 458);
+  if (data.tipo_cambio === "Manual") X(486, 670);
+  if (data.tipo_cambio === "Automático") X(573, 670);
 
   // ============= DATOS VENDEDOR =============
-  text(t(data.vendedor_empresa, 60), 60, 555);
-  text(t(data.vendedor_cif, 18), 430, 555);
+  text(t(data.vendedor_empresa, 60), 60, 798);
+  text(t(data.vendedor_cif, 18), 580, 798);
 
-  // ============= FIRMA COMPRADOR (texto auxiliar) =============
-  text(t(data.comprador_nombre, 50), 90, 765, { size: 8 });
+  // (No estampamos firma — espacio reservado para firma manuscrita)
 
   const bytes = await out.save();
   const ab = new ArrayBuffer(bytes.byteLength);
