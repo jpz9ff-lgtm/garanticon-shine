@@ -189,7 +189,7 @@ const NewWarranty = () => {
                 {errMsg("comprador_telefono")}
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <Label>Email</Label>
+                <Label>Email *</Label>
                 <Input type="email" value={data.comprador_email} onChange={(e) => update("comprador_email", e.target.value)} />
                 {errMsg("comprador_email")}
               </div>
@@ -243,8 +243,13 @@ const NewWarranty = () => {
                 {errMsg("matricula")}
               </div>
               <div className="space-y-1.5">
-                <Label>Nº Bastidor</Label>
-                <Input value={data.bastidor} onChange={(e) => update("bastidor", e.target.value.toUpperCase())} />
+                <Label>Nº Bastidor (VIN) *</Label>
+                <Input
+                  maxLength={17}
+                  value={data.bastidor}
+                  onChange={(e) => update("bastidor", e.target.value.toUpperCase())}
+                  placeholder="17 caracteres"
+                />
                 {errMsg("bastidor")}
               </div>
               <div className="space-y-1.5">
