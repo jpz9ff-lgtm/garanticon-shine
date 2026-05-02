@@ -93,7 +93,7 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
     !s ? "" : s.length > max ? s.slice(0, max - 1) + "…" : String(s);
 
   // ============= CABECERA =============
-  text(data.numero_poliza, W - 130, 78, { size: 10, bold: true, color: ORANGE });
+  text(data.numero_poliza, W - 130, 88, { size: 10, bold: true, color: ORANGE });
 
   // ============= FECHAS =============
   // Sobre las líneas grises bajo "FECHA DE VENTA / INICIO DE COBERTURA / FIN DE COBERTURA"
@@ -111,8 +111,8 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
   text(t(data.comprador_direccion, 75), 60, 283);
   text(t(data.comprador_cp, 8), 460, 283);
 
-  text(t(data.comprador_poblacion, 38), 60, 309);
-  text(t(data.comprador_provincia, 38), 360, 309);
+  text(t(data.comprador_poblacion, 38), 60, 300);
+  text(t(data.comprador_provincia, 38), 360, 300);
 
   // ============= DATOS VEHÍCULO =============
   text(t(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim(), 55), 60, 342);
