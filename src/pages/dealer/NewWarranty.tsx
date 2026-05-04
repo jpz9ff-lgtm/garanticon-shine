@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Loader2, Save, ShieldCheck } from "lucide-react";
 import { addMonths, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,10 +50,57 @@ const empty: FormState = {
 const NewWarranty = () => {
   const { dealer } = useAuth();
   const navigate = useNavigate();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEdit = Boolean(editId);
   const [step, setStep] = useState(1);
   const [data, setData] = useState<FormState>(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(isEdit);
+  const [originalMatricula, setOriginalMatricula] = useState<string>("");
+
+  useEffect(() => {
+    if (!isEdit || !editId) return;
+    setLoadingEdit(true);
+    supabase
+      .from("warranties")
+      .select("*")
+      .eq("id", editId)
+      .maybeSingle()
+      .then(({ data: w, error }) => {
+        if (error || !w) {
+          toast({ variant: "destructive", title: "Error", description: error?.message ?? "Garantía no encontrada" });
+          setLoadingEdit(false);
+          return;
+        }
+        setData({
+          comprador_nombre: w.comprador_nombre ?? "",
+          comprador_dni: w.comprador_dni ?? "",
+          comprador_telefono: w.comprador_telefono ?? "",
+          comprador_email: w.comprador_email ?? "",
+          comprador_direccion: w.comprador_direccion ?? "",
+          comprador_cp: w.comprador_cp ?? "",
+          comprador_poblacion: w.comprador_poblacion ?? "",
+          comprador_provincia: w.comprador_provincia ?? "",
+          vehiculo_marca: w.vehiculo_marca ?? "",
+          vehiculo_modelo: w.vehiculo_modelo ?? "",
+          matricula: w.matricula ?? "",
+          bastidor: w.bastidor ?? "",
+          fecha_matriculacion: w.fecha_matriculacion ?? "",
+          km_venta: w.km_venta?.toString() ?? "",
+          precio_venta: w.precio_venta?.toString() ?? "",
+          combustible: (w.combustible as FormState["combustible"]) ?? "Gasolina",
+          tipo_cambio: (w.tipo_cambio as FormState["tipo_cambio"]) ?? "Manual",
+          traccion_4x4: Boolean(w.traccion_4x4),
+          modalidad: w.modalidad as "PLUS" | "BASIC",
+          fecha_venta: w.fecha_venta ?? "",
+          fecha_inicio: w.fecha_inicio ?? "",
+          fecha_fin: w.fecha_fin ?? "",
+        });
+        setOriginalMatricula(w.matricula ?? "");
+        setLoadingEdit(false);
+      });
+  }, [editId, isEdit]);
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => {
     setData((d) => {
@@ -75,11 +122,12 @@ const NewWarranty = () => {
     m.trim().toUpperCase().replace(/\s|-/g, "");
 
   const isMatriculaDuplicada = async (matricula: string) => {
-    const { data: existing, error } = await supabase
+    let query = supabase
       .from("warranties")
       .select("id, numero_poliza")
-      .eq("matricula", matricula)
-      .maybeSingle();
+      .eq("matricula", matricula);
+    if (isEdit && editId) query = query.neq("id", editId);
+    const { data: existing, error } = await query.maybeSingle();
     if (error && error.code !== "PGRST116") throw error;
     return existing;
   };
@@ -105,7 +153,8 @@ const NewWarranty = () => {
     if (step === 2) {
       try {
         const matricula = normalizeMatricula(data.matricula);
-        const existing = await isMatriculaDuplicada(matricula);
+        const skipCheck = isEdit && matricula === normalizeMatricula(originalMatricula);
+        const existing = skipCheck ? null : await isMatriculaDuplicada(matricula);
         if (existing) {
           setErrors((e) => ({ ...e, matricula: "Esta matrícula ya tiene una garantía registrada." }));
           toast({
@@ -137,11 +186,9 @@ const NewWarranty = () => {
 
     setSubmitting(true);
     try {
-      const { data: polizaResp, error: polizaErr } = await supabase.rpc("generate_poliza_number");
-      if (polizaErr || !polizaResp) throw polizaErr ?? new Error("No se pudo generar número");
-
       const matriculaNorm = normalizeMatricula(data.matricula);
-      const duplicada = await isMatriculaDuplicada(matriculaNorm);
+      const skipCheck = isEdit && matriculaNorm === normalizeMatricula(originalMatricula);
+      const duplicada = skipCheck ? null : await isMatriculaDuplicada(matriculaNorm);
       if (duplicada) {
         toast({
           variant: "destructive",
@@ -154,11 +201,7 @@ const NewWarranty = () => {
         return;
       }
 
-      const { data: inserted, error } = await supabase
-        .from("warranties")
-        .insert({
-          numero_poliza: polizaResp as unknown as string,
-          dealer_id: dealer.id,
+      const payload = {
           comprador_nombre: data.comprador_nombre.trim(),
           comprador_dni: data.comprador_dni.trim().toUpperCase(),
           comprador_telefono: data.comprador_telefono.trim(),
@@ -182,18 +225,34 @@ const NewWarranty = () => {
           fecha_venta: data.fecha_venta,
           fecha_inicio: data.fecha_inicio,
           fecha_fin: data.fecha_fin,
-        })
-        .select("id")
-        .single();
+      };
 
-      if (error) throw error;
-      toast({ title: "Garantía emitida", description: `Nº póliza ${polizaResp}` });
-      navigate(`/dealer/garantia/${inserted.id}`);
+      if (isEdit && editId) {
+        const { error } = await supabase.from("warranties").update(payload).eq("id", editId);
+        if (error) throw error;
+        toast({ title: "Garantía actualizada", description: "Los cambios se han guardado." });
+        navigate(`/dealer/garantia/${editId}`);
+      } else {
+        const { data: polizaResp, error: polizaErr } = await supabase.rpc("generate_poliza_number");
+        if (polizaErr || !polizaResp) throw polizaErr ?? new Error("No se pudo generar número");
+        const { data: inserted, error } = await supabase
+          .from("warranties")
+          .insert({
+            ...payload,
+            numero_poliza: polizaResp as unknown as string,
+            dealer_id: dealer.id,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        toast({ title: "Garantía emitida", description: `Nº póliza ${polizaResp}` });
+        navigate(`/dealer/garantia/${inserted.id}`);
+      }
     } catch (e: any) {
       const msg = e?.code === "23505" || /duplicate key/i.test(e?.message ?? "")
         ? "Esta matrícula ya tiene una garantía registrada."
         : e?.message ?? "Inténtalo de nuevo";
-      toast({ variant: "destructive", title: "Error al emitir", description: msg });
+      toast({ variant: "destructive", title: isEdit ? "Error al actualizar" : "Error al emitir", description: msg });
     } finally {
       setSubmitting(false);
     }
@@ -207,15 +266,22 @@ const NewWarranty = () => {
       <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Nueva Garantía</h1>
+            <h1 className="text-2xl font-bold md:text-3xl">{isEdit ? "Editar Garantía" : "Nueva Garantía"}</h1>
             <p className="text-muted-foreground">Paso {step} de 3</p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/dealer/dashboard")}>
+          <Button variant="outline" onClick={() => navigate(isEdit && editId ? `/dealer/garantia/${editId}` : "/dealer/dashboard")}>
             <ArrowLeft className="mr-1" /> Volver
           </Button>
         </div>
 
         <Progress value={(step / 3) * 100} className="h-2 [&>div]:bg-primary" />
+
+        {loadingEdit && (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="mr-2 animate-spin" /> Cargando garantía…
+          </div>
+        )}
+        {!loadingEdit && (<>
 
         {step === 1 && (
           <Card>
@@ -409,11 +475,12 @@ const NewWarranty = () => {
             </Button>
           ) : (
             <Button onClick={submit} disabled={submitting} className="bg-primary text-primary-foreground hover:brightness-110">
-              {submitting ? <Loader2 className="mr-1 animate-spin" /> : <ShieldCheck className="mr-1" />}
-              Emitir Garantía
+              {submitting ? <Loader2 className="mr-1 animate-spin" /> : isEdit ? <Save className="mr-1" /> : <ShieldCheck className="mr-1" />}
+              {isEdit ? "Guardar cambios" : "Emitir Garantía"}
             </Button>
           )}
         </div>
+        </>)}
       </main>
     </div>
   );
