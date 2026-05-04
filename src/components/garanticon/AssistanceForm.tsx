@@ -64,13 +64,34 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
 
     const mensajeFinal = `[${parsed.data.tipo.toUpperCase()}] ${parsed.data.descripcion}\n\n— ${parsed.data.nombre} · Tel: ${parsed.data.telefono}`;
 
+    const submissionId = crypto.randomUUID();
     const { error } = await supabase.from("contacts").insert({
+      id: submissionId,
       nombre: parsed.data.nombre,
       email: parsed.data.email || null,
       matricula: parsed.data.matricula || null,
       numero_poliza: parsed.data.numero_poliza || null,
       mensaje: mensajeFinal,
     });
+
+    if (!error) {
+      // Aviso interno a info@garanticon.es (no bloquea al usuario si falla)
+      supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "assistance-notification",
+          idempotencyKey: `assistance-${submissionId}`,
+          templateData: {
+            nombre: parsed.data.nombre,
+            telefono: parsed.data.telefono,
+            email: parsed.data.email || "",
+            matricula: parsed.data.matricula || "",
+            numero_poliza: parsed.data.numero_poliza || "",
+            tipo: parsed.data.tipo,
+            descripcion: parsed.data.descripcion,
+          },
+        },
+      }).catch((e) => console.error("notify email failed", e));
+    }
 
     setSubmitting(false);
     if (error) {
