@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Eye, Loader2, Plus, Printer, Search } from "lucide-react";
+import { Eye, Loader2, Pencil, Plus, Printer, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DealerHeader } from "@/components/dealer/DealerHeader";
@@ -214,6 +214,9 @@ const DealerDashboard = () => {
                           <div className="flex justify-end gap-1">
                             <Button asChild variant="ghost" size="icon" title="Ver">
                               <Link to={`/dealer/garantia/${w.id}`}><Eye className="h-4 w-4" /></Link>
+                            </Button>
+                            <Button asChild variant="ghost" size="icon" title="Editar">
+                              <Link to={`/dealer/garantia/${w.id}/editar`}><Pencil className="h-4 w-4" /></Link>
                             </Button>
                             <Button asChild variant="ghost" size="icon" title="Imprimir">
                               <Link to={`/dealer/garantia/${w.id}?print=1`}><Printer className="h-4 w-4" /></Link>

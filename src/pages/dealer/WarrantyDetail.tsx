@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Download } from "lucide-react";
+import { ArrowLeft, Loader2, Download, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +68,10 @@ const WarrantyDetail = () => {
           <Button variant="outline" asChild>
             <Link to="/dealer/dashboard"><ArrowLeft className="mr-1" /> Volver al panel</Link>
           </Button>
+          <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to={`/dealer/garantia/${id}/editar`}><Pencil className="mr-1" /> Editar</Link>
+          </Button>
           <Button
             onClick={handleDownload}
             disabled={!w || downloading}
@@ -77,6 +81,7 @@ const WarrantyDetail = () => {
               ? <><Loader2 className="mr-1 animate-spin" /> Generando…</>
               : <><Download className="mr-1" /> Descargar contrato (PDF)</>}
           </Button>
+          </div>
         </div>
 
         {loading ? (
