@@ -124,7 +124,7 @@ const Login = () => {
           )}
           <p className="mt-6 text-center text-sm text-muted-foreground">
             ¿Problemas para entrar?{" "}
-            <a href="mailto:contacto@garanticon.es" className="font-medium text-primary hover:underline">
+            <a href="mailto:info@garanticon.es" className="font-medium text-primary hover:underline">
               Contacta con garanticon.es
             </a>
           </p>

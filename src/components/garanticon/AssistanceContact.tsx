@@ -10,9 +10,9 @@ const contactItems = [
   },
   {
     label: "Email",
-    value: "contacto@garanticon.es",
+    value: "info@garanticon.es",
     sub: "Respondemos en menos de 24 h",
-    href: "mailto:contacto@garanticon.es",
+    href: "mailto:info@garanticon.es",
     icon: Mail,
   },
   {
