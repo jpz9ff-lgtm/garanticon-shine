@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS warranties_matricula_unique ON public.warranties (matricula);

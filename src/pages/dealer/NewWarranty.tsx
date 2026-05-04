@@ -71,6 +71,19 @@ const NewWarranty = () => {
     [data.fecha_matriculacion, data.km_venta],
   );
 
+  const normalizeMatricula = (m: string) =>
+    m.trim().toUpperCase().replace(/\s|-/g, "");
+
+  const isMatriculaDuplicada = async (matricula: string) => {
+    const { data: existing, error } = await supabase
+      .from("warranties")
+      .select("id, numero_poliza")
+      .eq("matricula", matricula)
+      .maybeSingle();
+    if (error && error.code !== "PGRST116") throw error;
+    return existing;
+  };
+
   const validateStep = (s: number) => {
     let result;
     if (s === 1) result = compradorSchema.safeParse(data);
@@ -87,7 +100,28 @@ const NewWarranty = () => {
     return true;
   };
 
-  const next = () => { if (validateStep(step)) setStep((s) => s + 1); };
+  const next = async () => {
+    if (!validateStep(step)) return;
+    if (step === 2) {
+      try {
+        const matricula = normalizeMatricula(data.matricula);
+        const existing = await isMatriculaDuplicada(matricula);
+        if (existing) {
+          setErrors((e) => ({ ...e, matricula: "Esta matrícula ya tiene una garantía registrada." }));
+          toast({
+            variant: "destructive",
+            title: "Matrícula duplicada",
+            description: `Ya existe una garantía (${existing.numero_poliza}) para esta matrícula.`,
+          });
+          return;
+        }
+      } catch (e: any) {
+        toast({ variant: "destructive", title: "Error", description: e?.message ?? "No se pudo verificar la matrícula" });
+        return;
+      }
+    }
+    setStep((s) => s + 1);
+  };
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
   const submit = async () => {
@@ -106,6 +140,20 @@ const NewWarranty = () => {
       const { data: polizaResp, error: polizaErr } = await supabase.rpc("generate_poliza_number");
       if (polizaErr || !polizaResp) throw polizaErr ?? new Error("No se pudo generar número");
 
+      const matriculaNorm = normalizeMatricula(data.matricula);
+      const duplicada = await isMatriculaDuplicada(matriculaNorm);
+      if (duplicada) {
+        toast({
+          variant: "destructive",
+          title: "Matrícula duplicada",
+          description: `Ya existe una garantía (${duplicada.numero_poliza}) para esta matrícula.`,
+        });
+        setStep(2);
+        setErrors((e) => ({ ...e, matricula: "Esta matrícula ya tiene una garantía registrada." }));
+        setSubmitting(false);
+        return;
+      }
+
       const { data: inserted, error } = await supabase
         .from("warranties")
         .insert({
@@ -121,7 +169,7 @@ const NewWarranty = () => {
           comprador_provincia: data.comprador_provincia.trim(),
           vehiculo_marca: data.vehiculo_marca.trim(),
           vehiculo_modelo: data.vehiculo_modelo.trim(),
-          matricula: data.matricula.trim().toUpperCase().replace(/\s|-/g, ""),
+          matricula: matriculaNorm,
           bastidor: data.bastidor.trim() || null,
           fecha_matriculacion: data.fecha_matriculacion,
           km_venta: Number(data.km_venta),
@@ -142,7 +190,10 @@ const NewWarranty = () => {
       toast({ title: "Garantía emitida", description: `Nº póliza ${polizaResp}` });
       navigate(`/dealer/garantia/${inserted.id}`);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Error al emitir", description: e?.message ?? "Inténtalo de nuevo" });
+      const msg = e?.code === "23505" || /duplicate key/i.test(e?.message ?? "")
+        ? "Esta matrícula ya tiene una garantía registrada."
+        : e?.message ?? "Inténtalo de nuevo";
+      toast({ variant: "destructive", title: "Error al emitir", description: msg });
     } finally {
       setSubmitting(false);
     }
