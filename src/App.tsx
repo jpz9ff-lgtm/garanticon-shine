@@ -44,6 +44,10 @@ const App = () => (
               element={<ProtectedRoute><NewWarranty /></ProtectedRoute>}
             />
             <Route
+              path="/dealer/garantia/:id/editar"
+              element={<ProtectedRoute><NewWarranty /></ProtectedRoute>}
+            />
+            <Route
               path="/dealer/garantia/:id"
               element={<ProtectedRoute><WarrantyDetail /></ProtectedRoute>}
             />
