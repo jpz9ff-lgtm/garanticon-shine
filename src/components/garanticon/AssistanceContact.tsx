@@ -69,28 +69,6 @@ export const AssistanceContact = () => {
           })}
         </div>
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div className="rounded-2xl bg-card p-6 shadow-soft">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <Clock size={22} />
-            </div>
-            <p className="mt-5 text-sm font-semibold text-muted-foreground">Horario de atención</p>
-            <p className="mt-2 text-base font-bold text-foreground">Lun–Jue 9:00–14:00 y 16:00–19:00</p>
-            <p className="text-base font-bold text-foreground">Vie 9:00–14:00 y 15:30–18:00</p>
-          </div>
-          <div className="rounded-2xl bg-card p-6 shadow-soft">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <MapPin size={22} />
-            </div>
-            <p className="mt-5 text-sm font-semibold text-muted-foreground">Oficinas</p>
-            <p className="mt-2 text-base font-bold text-foreground">
-              Cabrick Automoción S.L. · CIF B01593748
-            </p>
-            <p className="text-base text-muted-foreground">
-              Avda. Somosierra 12, 28703 San Sebastián de los Reyes (Madrid)
-            </p>
-          </div>
-        </div>
       </div>
     </section>
   );
