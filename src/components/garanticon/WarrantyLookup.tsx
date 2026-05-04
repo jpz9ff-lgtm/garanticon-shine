@@ -36,6 +36,13 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
   const [dealer, setDealer] = useState<{ nombre_empresa: string; cif: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const sectionRef = useRef<HTMLDivElement>(null);
   const inView = useInView(sectionRef, { once: true, margin: "-100px" });
@@ -58,7 +65,7 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!plate || !policy) return;
+    if (!plate || !policy || cooldown > 0) return;
     setLoading(true);
     setWarranty(null);
     setDealer(null);
@@ -78,6 +85,7 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
       setErrorMsg("No pudimos consultar tu póliza. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
+      setCooldown(5);
     }
   };
 
@@ -149,10 +157,14 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
             <div className="md:col-span-2">
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || cooldown > 0}
                 className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:brightness-110 md:w-auto md:px-10"
               >
-                {loading ? <><Loader2 className="mr-2 animate-spin" /> Consultando…</> : "Consultar"}
+                {loading
+                  ? <><Loader2 className="mr-2 animate-spin" /> Consultando…</>
+                  : cooldown > 0
+                    ? `Espera ${cooldown}s…`
+                    : "Consultar"}
               </Button>
               {errorMsg && (
                 <p className="mt-3 text-sm font-medium text-destructive">{errorMsg}</p>
