@@ -6,9 +6,42 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Rate limiting: 10 req/min/IP, sliding window in-memory
+const RATE_LIMIT = 10;
+const WINDOW_MS = 60_000;
+const ipHits = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
+  if (arr.length >= RATE_LIMIT) {
+    ipHits.set(ip, arr);
+    return true;
+  }
+  arr.push(now);
+  ipHits.set(ip, arr);
+  // Garbage collect occasionally
+  if (ipHits.size > 5000) {
+    for (const [k, v] of ipHits) {
+      const filtered = v.filter((t) => now - t < WINDOW_MS);
+      if (filtered.length === 0) ipHits.delete(k);
+      else ipHits.set(k, filtered);
+    }
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim() || "unknown";
+  if (isRateLimited(ip)) {
+    return new Response(
+      JSON.stringify({ error: "Demasiadas consultas. Espera un minuto e inténtalo de nuevo." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   try {
