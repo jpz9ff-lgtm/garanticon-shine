@@ -24,7 +24,7 @@ export const Footer = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-background/60">Email</p>
-              <p className="mt-1 font-semibold">hola@garanticon.es</p>
+              <p className="mt-1 font-semibold">info@garanticon.es</p>
             </div>
           </div>
         </div>
