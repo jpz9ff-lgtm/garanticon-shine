@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, dealer, loading } = useAuth();
 
   if (loading) {
     return (
@@ -14,7 +14,11 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (!user) {
+  if (!user || !dealer) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!dealer.activo) {
     return <Navigate to="/login" replace />;
   }
 
