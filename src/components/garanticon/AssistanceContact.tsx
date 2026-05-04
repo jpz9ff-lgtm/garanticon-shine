@@ -1,4 +1,4 @@
-import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 
 const contactItems = [
   {
