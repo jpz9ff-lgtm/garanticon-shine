@@ -57,6 +57,26 @@ const Login = () => {
       toast({ variant: "destructive", title: "No se ha podido iniciar sesión", description: error });
       return;
     }
+    // Comprobar si el dealer está activo antes de navegar
+    const { data: sessData } = await supabase.auth.getSession();
+    const uid = sessData.session?.user?.id;
+    if (uid) {
+      const { data: dealerRow } = await supabase
+        .from("dealers")
+        .select("activo")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (dealerRow && dealerRow.activo === false) {
+        toast({
+          variant: "destructive",
+          title: "Cuenta desactivada",
+          description: "Tu cuenta está desactivada. Contacta con info@garanticon.es.",
+        });
+        await supabase.auth.signOut();
+        setSubmitting(false);
+        return;
+      }
+    }
     navigate("/dealer/dashboard", { replace: true });
   };
 
