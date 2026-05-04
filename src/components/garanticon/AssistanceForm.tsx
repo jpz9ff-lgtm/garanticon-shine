@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -38,10 +38,20 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
   const [submitting, setSubmitting] = useState(false);
   const [type, setType] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (cooldown > 0) return;
     const fd = new FormData(e.currentTarget);
+    // Honeypot: bots typically fill every input
+    if (fd.get("website")) return;
     const payload = {
       nombre: String(fd.get("nombre") || ""),
       telefono: String(fd.get("telefono") || ""),
@@ -94,6 +104,7 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
     }
 
     setSubmitting(false);
+    setCooldown(30);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: "No pudimos enviar tu consulta. Inténtalo de nuevo." });
       return;
@@ -151,6 +162,17 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
                 onSubmit={onSubmit}
                 className="grid gap-5 md:grid-cols-2"
               >
+                {/* Honeypot anti-bot — debe quedar vacío */}
+                <div className="sr-only" aria-hidden="true">
+                  <label htmlFor="website">No rellenar</label>
+                  <input
+                    id="website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="nombre" className="text-sm font-semibold">Nombre completo *</Label>
                   <Input id="nombre" name="nombre" required className={inputCls} />
@@ -205,10 +227,14 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
                 <div className="md:col-span-2">
                   <Button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || cooldown > 0}
                     className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:brightness-110"
                   >
-                    {submitting ? <><Loader2 className="mr-2 animate-spin" /> Enviando…</> : "Enviar consulta"}
+                    {submitting
+                      ? <><Loader2 className="mr-2 animate-spin" /> Enviando…</>
+                      : cooldown > 0
+                        ? `Enviado. Puedes enviar otra consulta en ${cooldown}s`
+                        : "Enviar consulta"}
                   </Button>
                   <p className="mt-3 text-xs text-muted-foreground">
                     Al enviar aceptas que contactemos contigo para gestionar tu solicitud.
