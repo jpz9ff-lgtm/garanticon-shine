@@ -1,4 +1,5 @@
 import { Phone, Mail } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
 
 export const Footer = () => {
@@ -29,7 +30,12 @@ export const Footer = () => {
         </div>
 
         <div className="mt-16 border-t border-background/10 pt-8 text-center text-sm text-background/50">
-          © 2026 Garanticon. Todos los derechos reservados.
+          <p>© 2026 Garanticon. Todos los derechos reservados.</p>
+          <p className="mt-2">
+            <Link to="/privacidad" className="font-semibold text-background/70 hover:text-background">
+              Política de privacidad
+            </Link>
+          </p>
         </div>
       </div>
     </footer>
