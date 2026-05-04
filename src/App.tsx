@@ -9,6 +9,7 @@ import PolicyArea from "./pages/PolicyArea.tsx";
 import AssistanceArea from "./pages/AssistanceArea.tsx";
 import ProfessionalsArea from "./pages/ProfessionalsArea.tsx";
 import Privacy from "./pages/Privacy.tsx";
+import AvisoLegal from "./pages/AvisoLegal.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/asistencia" element={<AssistanceArea />} />
             <Route path="/profesionales" element={<ProfessionalsArea />} />
             <Route path="/privacidad" element={<Privacy />} />
+            <Route path="/aviso-legal" element={<AvisoLegal />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

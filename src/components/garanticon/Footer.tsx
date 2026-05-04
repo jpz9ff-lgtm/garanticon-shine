@@ -31,9 +31,13 @@ export const Footer = () => {
 
         <div className="mt-16 border-t border-background/10 pt-8 text-center text-sm text-background/50">
           <p>© 2026 Garanticon. Todos los derechos reservados.</p>
-          <p className="mt-2">
-            <Link to="/privacidad" className="font-semibold text-background/70 hover:text-background">
+          <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <Link to="/privacidad" className="text-background/70 hover:text-background">
               Política de privacidad
+            </Link>
+            <span aria-hidden className="text-background/30">·</span>
+            <Link to="/aviso-legal" className="text-background/70 hover:text-background">
+              Aviso legal
             </Link>
           </p>
         </div>
