@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound.tsx";
 import PolicyArea from "./pages/PolicyArea.tsx";
 import AssistanceArea from "./pages/AssistanceArea.tsx";
 import ProfessionalsArea from "./pages/ProfessionalsArea.tsx";
+import Privacy from "./pages/Privacy.tsx";
 import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
@@ -17,6 +18,7 @@ import WarrantyDetail from "./pages/dealer/WarrantyDetail.tsx";
 import DealerAccount from "./pages/dealer/DealerAccount.tsx";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/dealer/ProtectedRoute";
+import { CookieBanner } from "@/components/garanticon/CookieBanner";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +34,7 @@ const App = () => (
             <Route path="/mi-poliza" element={<PolicyArea />} />
             <Route path="/asistencia" element={<AssistanceArea />} />
             <Route path="/profesionales" element={<ProfessionalsArea />} />
+            <Route path="/privacidad" element={<Privacy />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -58,6 +61,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
