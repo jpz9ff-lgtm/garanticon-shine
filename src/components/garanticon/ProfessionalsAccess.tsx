@@ -152,14 +152,6 @@ export const ProfessionalsAccess = () => {
               {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Entrar"}
             </Button>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 w-full rounded-xl text-base font-semibold"
-              onClick={() => navigate("/asistencia")}
-            >
-              Registrarme
-            </Button>
           </div>
         </form>
       </div>
