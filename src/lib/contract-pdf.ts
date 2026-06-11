@@ -49,8 +49,8 @@ const fmtDate = (d?: string | null) => {
  */
 const TIER_INFO: Record<string, { nombre: string; cobertura: number; color: [number, number, number] }> = {
   ELITE:    { nombre: "ÉLITE",    cobertura: 4500, color: [0.976, 0.451, 0.086] }, // #F97316
-  PLUS:     { nombre: "PLUS",     cobertura: 3000, color: [0.486, 0.227, 0.929] }, // #7C3AED
-  ESENCIAL: { nombre: "ESENCIAL", cobertura: 2000, color: [0.110, 0.110, 0.180] }, // #1C1C2E
+  PLUS:     { nombre: "PLUS",     cobertura: 3500, color: [0.486, 0.227, 0.929] }, // #7C3AED
+  ESENCIAL: { nombre: "ESENCIAL", cobertura: 2500, color: [0.110, 0.110, 0.180] }, // #1C1C2E
   BASIC:    { nombre: "BASIC",    cobertura: 2500, color: [0.486, 0.227, 0.929] },
 };
 

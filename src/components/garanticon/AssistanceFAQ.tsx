@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "¿Cuál es el límite económico por avería?",
-    a: "Garanticon dispone de tres modalidades: ÉLITE (4.500 € IVA inc. por avería), PLUS (3.000 € IVA inc. por avería) y ESENCIAL (2.000 € IVA inc. por avería). El límite total acumulado durante la vigencia es el precio de venta del vehículo en todas las modalidades.",
+    a: "Garanticon dispone de tres modalidades: ÉLITE (4.500 € IVA inc. por avería), PLUS (3.500 € IVA inc. por avería) y ESENCIAL (2.500 € IVA inc. por avería). El límite total acumulado durante la vigencia es el precio de venta del vehículo en todas las modalidades.",
   },
   {
     q: "¿Qué piezas están cubiertas?",
