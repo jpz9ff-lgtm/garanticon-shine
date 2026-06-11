@@ -199,9 +199,15 @@ const NewWarranty = () => {
     if (!validateStep(3)) return;
     if (!dealer) return;
 
-    if (data.modalidad === "PLUS" && !plusOk) {
-      toast({ variant: "destructive", title: "Modalidad no permitida",
-        description: "PLUS requiere vehículo con menos de 15 años y menos de 220.000 km." });
+    if (!detectedTier) {
+      toast({ variant: "destructive", title: "Faltan datos",
+        description: "Rellena la fecha de matriculación y los kilómetros para detectar la garantía." });
+      setStep(2);
+      return;
+    }
+    if (!data.acepta_condiciones) {
+      toast({ variant: "destructive", title: "Aceptación obligatoria",
+        description: "Debes confirmar que aceptas los límites económicos de la garantía." });
       setStep(3);
       return;
     }
@@ -242,8 +248,8 @@ const NewWarranty = () => {
           combustible: data.combustible,
           tipo_cambio: data.tipo_cambio,
           traccion_4x4: data.traccion_4x4,
-          modalidad: data.modalidad,
-          limite_averia: limiteAveriaFor(data.modalidad),
+          modalidad: detectedTier.tipo,
+          limite_averia: detectedTier.cobertura,
           fecha_venta: data.fecha_venta,
           fecha_inicio: data.fecha_inicio,
           fecha_fin: data.fecha_fin,
