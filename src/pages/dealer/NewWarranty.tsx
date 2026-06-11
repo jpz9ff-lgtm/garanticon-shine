@@ -449,29 +449,49 @@ const NewWarranty = () => {
         {step === 3 && (
           <Card>
             <CardHeader>
-              <CardTitle>3. Garantía</CardTitle>
-              <CardDescription>Selecciona modalidad y vigencia.</CardDescription>
+              <CardTitle>3. Garantía y vigencia</CardTitle>
+              <CardDescription>La modalidad se asigna automáticamente según el vehículo.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <RadioGroup value={data.modalidad} onValueChange={(v) => update("modalidad", v as "PLUS" | "BASIC")} className="grid gap-3 md:grid-cols-2">
-                <label className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-4 ${data.modalidad === "PLUS" ? "border-primary ring-2 ring-primary/30" : ""} ${!plusOk ? "opacity-60" : ""}`}>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="PLUS" disabled={!plusOk} />
-                    <span className="font-bold text-primary">PLUS</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Vehículos &lt; 15 años y &lt; 220.000 km. Límite 5.000€ IVA inc.</p>
-                  {!plusOk && data.fecha_matriculacion && (
-                    <p className="text-xs font-medium text-destructive">No disponible para este vehículo.</p>
-                  )}
-                </label>
-                <label className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-4 ${data.modalidad === "BASIC" ? "border-purple-600 ring-2 ring-purple-300" : ""}`}>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="BASIC" />
-                    <span className="font-bold text-purple-700">BASIC</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Vehículos ≥ 15 años o ≥ 220.000 km. Límite 2.500€ IVA inc.</p>
-                </label>
-              </RadioGroup>
+              <WarrantyTierIndicator
+                fechaMatriculacion={data.fecha_matriculacion}
+                kmVenta={data.km_venta}
+              />
+
+              {/* Tipo de garantía bloqueado */}
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-2">
+                  Tipo de garantía
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>Asignado automáticamente según datos del vehículo</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <Input
+                  value={detectedTier ? detectedTier.nombre : ""}
+                  readOnly
+                  disabled
+                  placeholder="Rellena año y km en el paso anterior"
+                  className="cursor-not-allowed bg-muted font-semibold"
+                />
+              </div>
+
+              {/* Condiciones colapsables */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border bg-muted/30 p-3 text-sm font-medium hover:bg-muted/60">
+                  <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Ver condiciones del tramo</span>
+                  <span className="text-xs text-muted-foreground">desplegar</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2 rounded-b-lg border border-t-0 bg-background p-4 text-sm text-muted-foreground">
+                  <p>• <strong>Cobertura máxima por avería:</strong> {detectedTier ? `${detectedTier.cobertura.toLocaleString("es-ES")} €` : "—"} IVA inc.</p>
+                  <p>• <strong>Límite total acumulado durante la vigencia:</strong> el valor de tasación del vehículo ({data.precio_venta ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "—"}).</p>
+                  <p>• <strong>Averías independientes:</strong> averías sin relación técnica entre sí se consideran eventos independientes, cada uno con su propio límite de cobertura.</p>
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1.5">
@@ -488,12 +508,39 @@ const NewWarranty = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg bg-muted p-4 text-sm">
-                <p className="font-medium">Resumen</p>
-                <p className="text-muted-foreground">
-                  Modalidad <span className="font-semibold">{data.modalidad}</span> · Límite por avería{" "}
-                  <span className="font-semibold">{limiteAveriaFor(data.modalidad).toLocaleString("es-ES")}€</span>
-                </p>
+              {/* Aceptación de límites — obligatoria */}
+              <div className="rounded-lg border-l-4 border-blue-700 bg-[#F0F7FF] p-4">
+                <div className="flex items-start gap-3">
+                  <FileText className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-700" />
+                  <div className="space-y-3 text-sm text-slate-800">
+                    <p>
+                      He leído y comprendo que la garantía GARANTICON{" "}
+                      <strong>{detectedTier?.nombre ?? "—"}</strong> cubre hasta{" "}
+                      <strong>{detectedTier ? `${detectedTier.cobertura.toLocaleString("es-ES")} €` : "—"}</strong>{" "}
+                      por avería. El total máximo abonado durante la vigencia del contrato no superará el valor de
+                      tasación del vehículo en el momento de la contratación{" "}
+                      (<strong>{data.precio_venta ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "—"}</strong>).
+                    </p>
+                    <p>
+                      Entiendo que averías sin relación técnica entre sí se consideran eventos independientes, cada uno
+                      con su propio límite de cobertura.
+                    </p>
+                    <p>
+                      Entiendo que Garanticon no está obligado a abonar cantidades que superen los límites descritos,
+                      aunque el coste real de la reparación sea mayor.
+                    </p>
+                    <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-md border border-blue-200 bg-white p-3">
+                      <Checkbox
+                        checked={data.acepta_condiciones}
+                        onCheckedChange={(v) => update("acepta_condiciones", Boolean(v))}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm font-medium">
+                        He leído, comprendo y acepto las condiciones y los límites económicos de esta garantía.
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -508,9 +555,13 @@ const NewWarranty = () => {
               Siguiente <ArrowRight className="ml-1" />
             </Button>
           ) : (
-            <Button onClick={submit} disabled={submitting} className="bg-primary text-primary-foreground hover:brightness-110">
+            <Button
+              onClick={submit}
+              disabled={submitting || !data.acepta_condiciones || !detectedTier}
+              className="bg-primary text-primary-foreground hover:brightness-110"
+            >
               {submitting ? <Loader2 className="mr-1 animate-spin" /> : isEdit ? <Save className="mr-1" /> : <ShieldCheck className="mr-1" />}
-              {isEdit ? "Guardar cambios" : "Emitir Garantía"}
+              {isEdit ? "Guardar cambios" : "Confirmar y generar contrato"}
             </Button>
           )}
         </div>
