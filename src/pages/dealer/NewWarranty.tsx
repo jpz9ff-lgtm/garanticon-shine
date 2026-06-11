@@ -98,10 +98,11 @@ const NewWarranty = () => {
           combustible: (w.combustible as FormState["combustible"]) ?? "Gasolina",
           tipo_cambio: (w.tipo_cambio as FormState["tipo_cambio"]) ?? "Manual",
           traccion_4x4: Boolean(w.traccion_4x4),
-          modalidad: w.modalidad as "PLUS" | "BASIC",
+          modalidad: w.modalidad as Modalidad,
           fecha_venta: w.fecha_venta ?? "",
           fecha_inicio: w.fecha_inicio ?? "",
           fecha_fin: w.fecha_fin ?? "",
+          acepta_condiciones: true,
         });
         setOriginalMatricula(w.matricula ?? "");
         setLoadingEdit(false);
@@ -119,10 +120,25 @@ const NewWarranty = () => {
     });
   };
 
-  const plusOk = useMemo(
-    () => isPlusEligible(data.fecha_matriculacion, Number(data.km_venta || 0)),
+  // Modalidad detectada automáticamente en tiempo real
+  const detectedTier = useMemo(
+    () => calcularGarantia(data.fecha_matriculacion, data.km_venta === "" ? null : Number(data.km_venta)),
     [data.fecha_matriculacion, data.km_venta],
   );
+
+  // Sincroniza modalidad automáticamente y notifica cambios de tipo
+  const lastTierRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!detectedTier) return;
+    if (data.modalidad !== detectedTier.tipo) {
+      setData((d) => ({ ...d, modalidad: detectedTier.tipo }));
+    }
+    if (lastTierRef.current && lastTierRef.current !== detectedTier.tipo) {
+      toast({ title: "✔ Garantía actualizada", description: `Ahora es ${detectedTier.nombre}` });
+    }
+    lastTierRef.current = detectedTier.tipo;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectedTier?.tipo]);
 
   const normalizeMatricula = (m: string) =>
     m.trim().toUpperCase().replace(/\s|-/g, "");
