@@ -59,8 +59,8 @@ export type WarrantyTier = {
 
 export const TIERS: Record<"ELITE" | "PLUS" | "ESENCIAL", WarrantyTier> = {
   ELITE: { tipo: "ELITE", nombre: "ÉLITE", cobertura: 4500, color: "#F97316", maxAnios: 8, maxKm: 120000 },
-  PLUS: { tipo: "PLUS", nombre: "PLUS", cobertura: 3000, color: "#7C3AED", maxAnios: 12, maxKm: 180000 },
-  ESENCIAL: { tipo: "ESENCIAL", nombre: "ESENCIAL", cobertura: 2000, color: "#1C1C2E", maxAnios: null, maxKm: null },
+  PLUS: { tipo: "PLUS", nombre: "PLUS", cobertura: 3500, color: "#7C3AED", maxAnios: 12, maxKm: 180000 },
+  ESENCIAL: { tipo: "ESENCIAL", nombre: "ESENCIAL", cobertura: 2500, color: "#1C1C2E", maxAnios: null, maxKm: null },
 };
 
 /** Determina la modalidad según antigüedad y km. Devuelve null si faltan datos. */
@@ -80,8 +80,8 @@ export const calcularGarantia = (
 
 export const limiteAveriaFor = (modalidad: Modalidad) => {
   if (modalidad === "ELITE") return 4500;
-  if (modalidad === "PLUS") return 3000;
-  if (modalidad === "ESENCIAL") return 2000;
+  if (modalidad === "PLUS") return 3500;
+  if (modalidad === "ESENCIAL") return 2500;
   return 2500; // legacy BASIC
 };
 
