@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Loader2, Lock, Save, ShieldCheck } from "lucide-react";
 import { addMonths, format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,14 +12,18 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 import {
   compradorSchema,
   vehiculoSchema,
   garantiaSchema,
-  isPlusEligible,
+  calcularGarantia,
   limiteAveriaFor,
+  type Modalidad,
 } from "@/lib/garanticon-validators";
+import { WarrantyTierIndicator } from "@/components/dealer/WarrantyTierIndicator";
 
 type FormState = {
   // comprador
@@ -32,7 +36,8 @@ type FormState = {
   precio_venta: string; combustible: "Gasolina" | "Diésel" | "Híbrido" | "Eléctrico";
   tipo_cambio: "Manual" | "Automático"; traccion_4x4: boolean;
   // garantia
-  modalidad: "PLUS" | "BASIC"; fecha_venta: string; fecha_inicio: string; fecha_fin: string;
+  modalidad: Modalidad; fecha_venta: string; fecha_inicio: string; fecha_fin: string;
+  acepta_condiciones: boolean;
 };
 
 const empty: FormState = {
@@ -41,10 +46,11 @@ const empty: FormState = {
   vehiculo_marca: "", vehiculo_modelo: "", matricula: "", bastidor: "",
   fecha_matriculacion: "", km_venta: "", precio_venta: "",
   combustible: "Gasolina", tipo_cambio: "Manual", traccion_4x4: false,
-  modalidad: "BASIC",
+  modalidad: "ESENCIAL",
   fecha_venta: format(new Date(), "yyyy-MM-dd"),
   fecha_inicio: format(new Date(), "yyyy-MM-dd"),
   fecha_fin: format(addMonths(new Date(), 12), "yyyy-MM-dd"),
+  acepta_condiciones: false,
 };
 
 const NewWarranty = () => {
