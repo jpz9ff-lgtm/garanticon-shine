@@ -17,13 +17,15 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { modalidadBadge } from "@/lib/modalidad-ui";
+import type { Modalidad } from "@/lib/garanticon-validators";
 
 type Warranty = {
   id: string;
   numero_poliza: string;
   comprador_nombre: string;
   matricula: string;
-  modalidad: "PLUS" | "BASIC";
+  modalidad: Modalidad;
   fecha_inicio: string;
   fecha_fin: string;
   estado: "activa" | "expirada" | "cancelada";
@@ -156,8 +158,10 @@ const DealerDashboard = () => {
                 <SelectTrigger className="md:w-44"><SelectValue placeholder="Modalidad" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las modalidades</SelectItem>
+                  <SelectItem value="ELITE">ÉLITE</SelectItem>
                   <SelectItem value="PLUS">PLUS</SelectItem>
-                  <SelectItem value="BASIC">BASIC</SelectItem>
+                  <SelectItem value="ESENCIAL">ESENCIAL</SelectItem>
+                  <SelectItem value="BASIC">BASIC (legado)</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={estado} onValueChange={setEstado}>
@@ -199,13 +203,7 @@ const DealerDashboard = () => {
                         <TableCell className="font-mono text-xs">{w.numero_poliza}</TableCell>
                         <TableCell className="font-medium">{w.comprador_nombre}</TableCell>
                         <TableCell className="font-mono uppercase">{w.matricula}</TableCell>
-                        <TableCell>
-                          {w.modalidad === "PLUS" ? (
-                            <Badge className="bg-primary hover:bg-primary">PLUS</Badge>
-                          ) : (
-                            <Badge className="bg-purple-600 hover:bg-purple-600">BASIC</Badge>
-                          )}
-                        </TableCell>
+                        <TableCell>{modalidadBadge(w.modalidad)}</TableCell>
                         <TableCell className="whitespace-nowrap text-sm">
                           {fmt(w.fecha_inicio)} → {fmt(w.fecha_fin)}
                         </TableCell>

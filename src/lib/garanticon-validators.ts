@@ -34,20 +34,65 @@ export const vehiculoSchema = z.object({
 });
 
 export const garantiaSchema = z.object({
-  modalidad: z.enum(["PLUS", "BASIC"]),
+  modalidad: z.enum(["ELITE", "PLUS", "ESENCIAL", "BASIC"]),
   fecha_venta: z.string().min(4, "Obligatorio"),
   fecha_inicio: z.string().min(4, "Obligatorio"),
   fecha_fin: z.string().min(4, "Obligatorio"),
 });
 
-/** PLUS solo si el vehículo tiene < 15 años Y < 220.000 km */
-export const isPlusEligible = (fechaMatriculacion: string, kmVenta: number) => {
-  if (!fechaMatriculacion) return false;
-  const matric = new Date(fechaMatriculacion);
-  if (isNaN(matric.getTime())) return false;
-  const years = (Date.now() - matric.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-  return years < 15 && kmVenta < 220000;
+/**
+ * Nuevas modalidades (3 tramos):
+ *  - ÉLITE:    ≤ 8 años  y ≤ 120.000 km   → 4.500 €
+ *  - PLUS:     ≤ 12 años y ≤ 180.000 km   → 3.000 €
+ *  - ESENCIAL: resto                       → 2.000 €
+ */
+export type Modalidad = "ELITE" | "PLUS" | "ESENCIAL" | "BASIC";
+
+export type WarrantyTier = {
+  tipo: "ELITE" | "PLUS" | "ESENCIAL";
+  nombre: string;
+  cobertura: number;
+  color: string;
+  maxAnios: number | null;
+  maxKm: number | null;
 };
 
-export const limiteAveriaFor = (modalidad: "PLUS" | "BASIC") =>
-  modalidad === "PLUS" ? 5000 : 2500;
+export const TIERS: Record<"ELITE" | "PLUS" | "ESENCIAL", WarrantyTier> = {
+  ELITE: { tipo: "ELITE", nombre: "ÉLITE", cobertura: 4500, color: "#F97316", maxAnios: 8, maxKm: 120000 },
+  PLUS: { tipo: "PLUS", nombre: "PLUS", cobertura: 3000, color: "#7C3AED", maxAnios: 12, maxKm: 180000 },
+  ESENCIAL: { tipo: "ESENCIAL", nombre: "ESENCIAL", cobertura: 2000, color: "#1C1C2E", maxAnios: null, maxKm: null },
+};
+
+/** Determina la modalidad según antigüedad y km. Devuelve null si faltan datos. */
+export const calcularGarantia = (
+  fechaMatriculacion: string,
+  kmVenta: number | null | undefined,
+): WarrantyTier | null => {
+  if (!fechaMatriculacion || kmVenta == null || isNaN(Number(kmVenta))) return null;
+  const matric = new Date(fechaMatriculacion);
+  if (isNaN(matric.getTime())) return null;
+  const antiguedad = (Date.now() - matric.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  const km = Number(kmVenta);
+  if (antiguedad <= 8 && km <= 120000) return TIERS.ELITE;
+  if (antiguedad <= 12 && km <= 180000) return TIERS.PLUS;
+  return TIERS.ESENCIAL;
+};
+
+export const limiteAveriaFor = (modalidad: Modalidad) => {
+  if (modalidad === "ELITE") return 4500;
+  if (modalidad === "PLUS") return 3000;
+  if (modalidad === "ESENCIAL") return 2000;
+  return 2500; // legacy BASIC
+};
+
+export const tierColor = (modalidad: Modalidad) => {
+  if (modalidad === "ELITE") return "#F97316";
+  if (modalidad === "PLUS") return "#7C3AED";
+  return "#1C1C2E"; // ESENCIAL / BASIC
+};
+
+/** Mantiene compat retro con código existente. */
+export const isPlusEligible = (fechaMatriculacion: string, kmVenta: number) => {
+  const t = calcularGarantia(fechaMatriculacion, kmVenta);
+  return t?.tipo === "ELITE" || t?.tipo === "PLUS";
+};
