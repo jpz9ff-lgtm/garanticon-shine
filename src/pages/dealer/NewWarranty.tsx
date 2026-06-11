@@ -412,6 +412,12 @@ const NewWarranty = () => {
                 <Input type="number" min="0" step="0.01" value={data.precio_venta} onChange={(e) => update("precio_venta", e.target.value)} />
                 {errMsg("precio_venta")}
               </div>
+              <div className="md:col-span-2">
+                <WarrantyTierIndicator
+                  fechaMatriculacion={data.fecha_matriculacion}
+                  kmVenta={data.km_venta}
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Combustible *</Label>
                 <RadioGroup value={data.combustible} onValueChange={(v) => update("combustible", v as FormState["combustible"])} className="flex flex-wrap gap-3">
