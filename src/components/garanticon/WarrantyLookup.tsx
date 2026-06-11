@@ -202,15 +202,19 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
                     <p className="font-semibold text-foreground">{warranty.matricula}</p>
                   </div>
                 </div>
-                {warranty.modalidad === "PLUS" ? (
-                  <span className="rounded-full gradient-primary px-4 py-1.5 text-xs font-bold tracking-wider text-primary-foreground shadow-soft">
-                    PLUS
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-purple-600 px-4 py-1.5 text-xs font-bold tracking-wider text-white">
-                    BASIC
-                  </span>
-                )}
+                {(() => {
+                  const m = warranty.modalidad;
+                  const bg = m === "ELITE" ? "#F97316" : m === "PLUS" ? "#7C3AED" : m === "ESENCIAL" ? "#1C1C2E" : "#7C3AED";
+                  const label = m === "ELITE" ? "ÉLITE" : m;
+                  return (
+                    <span
+                      className="rounded-full px-4 py-1.5 text-xs font-bold tracking-wider text-white shadow-soft"
+                      style={{ backgroundColor: bg }}
+                    >
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* Coverage timeline */}
@@ -281,7 +285,7 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
                   <FileText className="mr-2 inline h-4 w-4" /> Ver condiciones y coberturas
                 </summary>
                 <div className="mt-4 space-y-3 leading-relaxed text-muted-foreground">
-                  <p><strong>Modalidad {warranty.modalidad}</strong> — Límite por avería {Number(warranty.limite_averia).toLocaleString("es-ES")} € IVA inc. Límite total acumulado: precio de venta del vehículo.</p>
+                  <p><strong>Modalidad {warranty.modalidad === "ELITE" ? "ÉLITE" : warranty.modalidad}</strong> — Límite por avería {Number(warranty.limite_averia).toLocaleString("es-ES")} € IVA inc. Límite total acumulado: precio de venta del vehículo.</p>
                   <p><strong>Carencia:</strong> 15 días naturales y 1.000 km desde la fecha de venta.</p>
                   <p><strong>Tramitación:</strong> comunica cualquier avería a Garanticon en 3 días hábiles desde su aparición. Ninguna reparación sin autorización previa generará obligación de pago.</p>
                   <p><strong>Mantenimiento obligatorio:</strong> revisiones cada 12 meses o 12.000 km (lo que antes ocurra), acreditadas con factura de taller.</p>

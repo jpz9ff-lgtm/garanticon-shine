@@ -17,13 +17,15 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { modalidadBadge } from "@/lib/modalidad-ui";
+import type { Modalidad } from "@/lib/garanticon-validators";
 
 type Warranty = {
   id: string;
   numero_poliza: string;
   comprador_nombre: string;
   matricula: string;
-  modalidad: "PLUS" | "BASIC";
+  modalidad: Modalidad;
   fecha_inicio: string;
   fecha_fin: string;
   estado: "activa" | "expirada" | "cancelada";
