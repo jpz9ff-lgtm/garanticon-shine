@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import { generateContractPdf, downloadBlob } from "@/lib/contract-pdf";
+import { modalidadBadge } from "@/lib/modalidad-ui";
+import type { Modalidad } from "@/lib/garanticon-validators";
 
 type W = {
   id: string; numero_poliza: string;
@@ -20,7 +22,7 @@ type W = {
   vehiculo_marca: string; vehiculo_modelo: string; matricula: string; bastidor: string | null;
   fecha_matriculacion: string | null; km_venta: number | null; precio_venta: number | null;
   combustible: string | null; tipo_cambio: string | null; traccion_4x4: boolean;
-  modalidad: "PLUS" | "BASIC"; limite_averia: number;
+  modalidad: Modalidad; limite_averia: number;
   fecha_venta: string; fecha_inicio: string; fecha_fin: string;
   estado: "activa" | "expirada" | "cancelada";
 };
@@ -49,6 +51,7 @@ const WarrantyDetail = () => {
     try {
       const blob = await generateContractPdf({
         ...w,
+        limite_averia: Number(w.limite_averia),
         vendedor_empresa: dealer?.nombre_empresa,
         vendedor_cif: dealer?.cif,
       });
@@ -99,9 +102,7 @@ const WarrantyDetail = () => {
                   <p className="text-sm text-muted-foreground">Vigencia {fmt(w.fecha_inicio)} → {fmt(w.fecha_fin)}</p>
                 </div>
                 <div className="flex gap-2">
-                  {w.modalidad === "PLUS"
-                    ? <Badge className="bg-primary hover:bg-primary">PLUS</Badge>
-                    : <Badge className="bg-purple-600 hover:bg-purple-600">BASIC</Badge>}
+                  {modalidadBadge(w.modalidad)}
                   {w.estado === "activa" ? <Badge className="bg-emerald-500 hover:bg-emerald-500">Activa</Badge>
                     : w.estado === "expirada" ? <Badge variant="secondary">Expirada</Badge>
                     : <Badge variant="destructive">Cancelada</Badge>}
