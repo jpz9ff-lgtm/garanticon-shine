@@ -135,3 +135,78 @@ All colors MUST be HSL.
   50% { opacity: 0.9; transform: scale(1.1); }
 }
 .animate-pulse-glow { animation: pulse-glow 8s ease-in-out infinite; }
+
+/* ====== Impresión A4 del formulario de garantía ====== */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  html, body {
+    background: #fff !important;
+    width: 190mm;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Contenedor raíz del área de impresión */
+  main, .print-root {
+    max-width: 190mm !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+  }
+  /* Todo encaja al ancho útil — nada se sale por la derecha */
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+  }
+  /* Evita títulos en una sola línea que fuerzan el ancho */
+  h1, h2, h3, h4, .uppercase, [class*="tracking-"] {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  /* Recuadros tipo "Límite por avería" — ajustan al padre, nunca a su contenido */
+  .inline-block, [class*="inline-flex"] {
+    display: inline-flex !important;
+    max-width: 100% !important;
+  }
+  /* Oculta lo que no debe imprimirse */
+  .no-print, header, nav, button, [role="navigation"] {
+    display: none !important;
+  }
+  /* Ajuste tipográfico ligero para que entre el contenido */
+  body { font-size: 11pt; }
+  h1 { font-size: 18pt; }
+  h2 { font-size: 14pt; }
+  h3 { font-size: 12pt; }
+
+  /* ====== Checkboxes y radios centrados al imprimir ====== */
+  [role="checkbox"],
+  [role="radio"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 14px !important;
+    height: 14px !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  [role="checkbox"] svg,
+  [role="radio"] svg {
+    position: static !important;
+    width: 10px !important;
+    height: 10px !important;
+    margin: 0 !important;
+    inset: auto !important;
+    transform: none !important;
+    line-height: 1 !important;
+  }
+}
