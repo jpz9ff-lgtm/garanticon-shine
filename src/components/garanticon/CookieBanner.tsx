@@ -15,9 +15,9 @@ export const CookieBanner = () => {
     }
   }, []);
 
-  const accept = () => {
+  const choose = (choice: "accepted" | "rejected") => {
     try {
-      localStorage.setItem(STORAGE_KEY, "accepted");
+      localStorage.setItem(STORAGE_KEY, choice);
     } catch {
       // ignore
     }
@@ -35,17 +35,24 @@ export const CookieBanner = () => {
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <p className="text-sm leading-relaxed text-foreground">
-          Usamos cookies técnicas necesarias para el funcionamiento del sitio. Sin datos de terceros.
-        </p>
-        <div className="flex shrink-0 items-center gap-3">
+          Usamos cookies técnicas necesarias para el funcionamiento del sitio. Sin datos de terceros.{" "}
           <Link
-            to="/privacidad"
-            className="text-sm font-semibold text-foreground underline underline-offset-4 hover:text-primary"
+            to="/politica-de-cookies"
+            className="font-semibold text-foreground underline underline-offset-4 hover:text-primary"
           >
             Más información
           </Link>
+        </p>
+        <div className="flex shrink-0 items-center gap-3">
           <Button
-            onClick={accept}
+            onClick={() => choose("rejected")}
+            variant="outline"
+            className="h-10 rounded-xl border-border px-5 text-sm font-semibold"
+          >
+            Rechazar
+          </Button>
+          <Button
+            onClick={() => choose("accepted")}
             className="h-10 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground hover:brightness-110"
           >
             Aceptar
