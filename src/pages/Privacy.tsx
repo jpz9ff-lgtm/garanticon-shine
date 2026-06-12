@@ -20,14 +20,16 @@ const Privacy = () => {
               Política de privacidad
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
-              Última actualización: mayo de 2026
+              Última actualización: junio de 2026
             </p>
           </header>
 
           <section className="space-y-2">
             <h2 className="text-xl font-semibold text-foreground">Responsable del tratamiento</h2>
             <p className="text-base leading-relaxed text-muted-foreground">
-              Garanticon. Para cualquier consulta sobre tus datos puedes escribirnos a{" "}
+              <strong>Cabrick Automoción S.L.</strong> (marca <strong>Garanticon</strong>) —
+              CIF B01593748 — Avda. Somosierra 12, 28703 San Sebastián de los Reyes, Madrid.
+              Para cualquier consulta sobre tus datos puedes escribirnos a{" "}
               <a href="mailto:info@garanticon.es" className="font-semibold text-primary hover:underline">
                 info@garanticon.es
               </a>.
@@ -70,18 +72,52 @@ const Privacy = () => {
           <section className="space-y-2">
             <h2 className="text-xl font-semibold text-foreground">Tus derechos</h2>
             <p className="text-base leading-relaxed text-muted-foreground">
-              Puedes ejercer tus derechos de acceso, rectificación y supresión de tus datos, así como los
-              demás derechos reconocidos por el RGPD, escribiendo a{" "}
+              Conforme al RGPD y a la LOPDGDD, puedes ejercer en cualquier momento los siguientes
+              derechos escribiendo a{" "}
               <a href="mailto:info@garanticon.es" className="font-semibold text-primary hover:underline">
                 info@garanticon.es
-              </a>.
+              </a>:
+            </p>
+            <ul className="list-disc space-y-1 pl-6 text-base leading-relaxed text-muted-foreground">
+              <li>Acceso a tus datos personales.</li>
+              <li>Rectificación de datos inexactos o incompletos.</li>
+              <li>Supresión (derecho al olvido).</li>
+              <li>Oposición al tratamiento.</li>
+              <li>Limitación del tratamiento.</li>
+              <li>Portabilidad de los datos.</li>
+              <li>A no ser objeto de decisiones individuales automatizadas, incluida la elaboración de perfiles.</li>
+              <li>A retirar el consentimiento en cualquier momento, sin que ello afecte a la licitud del tratamiento previo.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-xl font-semibold text-foreground">Encargados del tratamiento</h2>
+            <p className="text-base leading-relaxed text-muted-foreground">
+              Para prestar el servicio trabajamos con proveedores que actúan como encargados del
+              tratamiento bajo contrato:
+            </p>
+            <ul className="list-disc space-y-1 pl-6 text-base leading-relaxed text-muted-foreground">
+              <li><strong>Supabase</strong> — base de datos y autenticación, alojada en la Unión Europea (región París).</li>
+              <li><strong>Cloudflare</strong> — entrega y seguridad de la web (CDN, mitigación de ataques).</li>
+            </ul>
+            <p className="text-base leading-relaxed text-muted-foreground">
+              No vendemos ni cedemos tus datos a terceros con fines comerciales.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-foreground">Cesión a terceros</h2>
+            <h2 className="text-xl font-semibold text-foreground">Autoridad de control</h2>
             <p className="text-base leading-relaxed text-muted-foreground">
-              No vendemos ni cedemos tus datos a terceros.
+              Si considera que el tratamiento no se ajusta a la normativa, puede presentar una
+              reclamación ante la Agencia Española de Protección de Datos (AEPD),{" "}
+              <a
+                href="https://www.aepd.es"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-semibold text-primary hover:underline"
+              >
+                www.aepd.es
+              </a>.
             </p>
           </section>
 
