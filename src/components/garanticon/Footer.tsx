@@ -39,6 +39,14 @@ export const Footer = () => {
             <Link to="/aviso-legal" className="text-background/70 hover:text-background">
               Aviso legal
             </Link>
+            <span aria-hidden className="text-background/30">·</span>
+            <Link to="/politica-de-cookies" className="text-background/70 hover:text-background">
+              Política de cookies
+            </Link>
+            <span aria-hidden className="text-background/30">·</span>
+            <Link to="/terminos" className="text-background/70 hover:text-background">
+              Términos
+            </Link>
           </p>
         </div>
       </div>

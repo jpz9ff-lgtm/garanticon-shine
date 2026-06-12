@@ -225,43 +225,16 @@ async function fetchBinary(url: string) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function loadGoogleFont(weight: number) {
-  if (!fontCache.has(weight)) {
-    fontCache.set(weight, (async () => {
-      const cssResponse = await fetch(`https://fonts.googleapis.com/css2?family=Nunito:wght@${weight}&display=swap`);
-      if (!cssResponse.ok) throw new Error("No se pudo cargar la fuente Nunito");
-      const css = await cssResponse.text();
-      const urls = [...css.matchAll(/url\((https:[^)]+)\)/g)].map((match) => match[1]);
-      const fontUrl = urls.at(-1);
-      if (!fontUrl) throw new Error("No se encontró un archivo compatible de Nunito");
-      return fetchBinary(fontUrl);
-    })());
-  }
-
-  return fontCache.get(weight)!;
-}
-
 async function loadFonts(pdf: PDFDocument): Promise<Fonts> {
-  try {
-    pdf.registerFontkit(fontkit);
-    const [regularBytes, boldBytes, blackBytes] = await Promise.all([
-      loadGoogleFont(400),
-      loadGoogleFont(700),
-      loadGoogleFont(900),
-    ]);
-
-    return {
-      regular: await pdf.embedFont(regularBytes),
-      bold: await pdf.embedFont(boldBytes),
-      black: await pdf.embedFont(blackBytes),
-    };
-  } catch {
-    return {
-      regular: await pdf.embedFont(StandardFonts.Helvetica),
-      bold: await pdf.embedFont(StandardFonts.HelveticaBold),
-      black: await pdf.embedFont(StandardFonts.HelveticaBold),
-    };
-  }
+  // Self-hosted approach: rely on standard PDF fonts (Helvetica) so the
+  // contract PDF generator works under a strict CSP without any external
+  // network requests (Google Fonts is blocked by font-src/connect-src 'self').
+  pdf.registerFontkit(fontkit);
+  return {
+    regular: await pdf.embedFont(StandardFonts.Helvetica),
+    bold: await pdf.embedFont(StandardFonts.HelveticaBold),
+    black: await pdf.embedFont(StandardFonts.HelveticaBold),
+  };
 }
 
 async function loadLogo(pdf: PDFDocument) {
