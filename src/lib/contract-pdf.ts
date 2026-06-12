@@ -322,7 +322,7 @@ function buildContractHtml(data: ContractData): string {
  * Genera el contrato como PDF real (descargable) renderizando el HTML
  * en un iframe oculto, capturándolo con html2canvas y exportando con jsPDF.
  */
-export async function generateContractPdf(data: ContractData): Promise<Blob> {
+export async function generateContractPdf(data: ContractData, filename?: string): Promise<Blob> {
   const html = buildContractHtml(data);
 
   const iframe = document.createElement("iframe");
@@ -382,7 +382,13 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
       heightLeft -= pageH;
     }
 
-    return pdf.output("blob");
+    const blob = pdf.output("blob");
+
+    if (filename) {
+      pdf.save(filename, { returnPromise: true });
+    }
+
+    return blob;
   } finally {
     document.body.removeChild(iframe);
   }
