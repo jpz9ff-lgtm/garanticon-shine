@@ -315,11 +315,6 @@ function buildContractHtml(data: ContractData): string {
     Este documento constituye un contrato vinculante entre las partes indicadas. Conserve una copia para su consulta.
   </div>
 </div>
-<script>
-  window.addEventListener('load', function(){
-    setTimeout(function(){ window.focus(); window.print(); }, 400);
-  });
-</script>
 </body></html>`;
 }
 
@@ -327,12 +322,8 @@ function buildContractHtml(data: ContractData): string {
  * Genera el contrato como PDF real (descargable) renderizando el HTML
  * en un iframe oculto, capturándolo con html2canvas y exportando con jsPDF.
  */
-export async function generateContractPdf(data: ContractData): Promise<Blob> {
-  // HTML sin el script de auto-print
-  const html = buildContractHtml(data).replace(
-    /<script>[\s\S]*?<\/script>/g,
-    ""
-  );
+export async function generateContractPdf(data: ContractData, filename?: string): Promise<Blob> {
+  const html = buildContractHtml(data);
 
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
@@ -391,7 +382,13 @@ export async function generateContractPdf(data: ContractData): Promise<Blob> {
       heightLeft -= pageH;
     }
 
-    return pdf.output("blob");
+    const blob = pdf.output("blob");
+
+    if (filename) {
+      await pdf.save(filename, { returnPromise: true });
+    }
+
+    return blob;
   } finally {
     document.body.removeChild(iframe);
   }
