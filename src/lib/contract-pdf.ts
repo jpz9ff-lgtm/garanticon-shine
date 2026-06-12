@@ -1,6 +1,7 @@
 import { format } from "date-fns";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type PDFImage, type RGB } from "pdf-lib";
+import garanticonLogo from "@/assets/garanticon-logo.png.asset.json";
 
 export type ContractData = {
   numero_poliza: string;
@@ -43,6 +44,59 @@ const TIER: Record<string, { nombre: string; cobertura: number; accent: string; 
   BASIC:    { nombre: "ESENCIAL", cobertura: 2500, accent: "#1C1C2E", accentDark: "#0F0F1A", accentLight: "#F3F4F6" },
 };
 
+const MM = 72 / 25.4;
+const PAGE_WIDTH = 210 * MM;
+const PAGE_HEIGHT = 297 * MM;
+const PAGE_PADDING_X = 14 * MM;
+const PAGE_PADDING_Y = 9 * MM;
+const CONTENT_WIDTH = PAGE_WIDTH - PAGE_PADDING_X * 2;
+const BLOCK_GAP = 8;
+const COLUMN_GAP = 14;
+const SECTION_PADDING_X = 12;
+const SECTION_PADDING_Y = 10;
+
+const COLORS = {
+  orange: hex("#F97316"),
+  orangeDark: hex("#EA580C"),
+  purple: hex("#7C3AED"),
+  dark: hex("#1C1C2E"),
+  darkSoft: hex("#0F0F1A"),
+  grey: hex("#6B7280"),
+  greyLight: hex("#F3F4F6"),
+  greyBorder: hex("#E5E7EB"),
+  blue: hex("#1E40AF"),
+  blueLight: hex("#EFF6FF"),
+  white: rgb(1, 1, 1),
+};
+
+type Fonts = {
+  regular: PDFFont;
+  bold: PDFFont;
+  black: PDFFont;
+};
+
+type Field = {
+  label: string;
+  value: string;
+};
+
+type ConditionItem = {
+  title: string;
+  paragraphs?: string[];
+  bullets?: string[];
+};
+
+type PdfContext = {
+  pdf: PDFDocument;
+  page: PDFPage;
+  fonts: Fonts;
+  logo: PDFImage | null;
+  y: number;
+};
+
+const fontCache = new Map<number, Promise<Uint8Array>>();
+let logoCache: Promise<Uint8Array> | null = null;
+
 const fmtDate = (d?: string | null) => {
   if (!d) return "—";
   try { return format(new Date(d), "dd/MM/yyyy"); } catch { return "—"; }
@@ -50,347 +104,679 @@ const fmtDate = (d?: string | null) => {
 const fmtEUR = (n?: number | null) =>
   n != null && !isNaN(Number(n)) ? `${Number(n).toLocaleString("es-ES")}€` : "—";
 const v = (s?: string | null) => (s && String(s).trim() ? String(s) : "—");
-const esc = (s: unknown) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+function hex(value: string): RGB {
+  const clean = value.replace("#", "");
+  const full = clean.length === 3
+    ? clean.split("").map((char) => char + char).join("")
+    : clean;
+  const int = Number.parseInt(full, 16);
+  return rgb(
+    ((int >> 16) & 255) / 255,
+    ((int >> 8) & 255) / 255,
+    (int & 255) / 255,
+  );
+}
 
-function buildContractHtml(data: ContractData): string {
-  const t = TIER[data.modalidad] ?? TIER.ESENCIAL;
-  const cobertura = data.limite_averia != null ? Number(data.limite_averia) : t.cobertura;
+function normalizeText(text?: string | null) {
+  return String(text ?? "").replace(/\s+/g, " ").trim();
+}
+
+function topToPdfY(top: number, height: number) {
+  return PAGE_HEIGHT - top - height;
+}
+
+function drawRect(page: PDFPage, x: number, top: number, width: number, height: number, options: {
+  color?: RGB;
+  borderColor?: RGB;
+  borderWidth?: number;
+  opacity?: number;
+}) {
+  page.drawRectangle({
+    x,
+    y: topToPdfY(top, height),
+    width,
+    height,
+    color: options.color,
+    borderColor: options.borderColor,
+    borderWidth: options.borderWidth,
+    opacity: options.opacity,
+  });
+}
+
+function drawText(page: PDFPage, text: string, x: number, top: number, font: PDFFont, size: number, color: RGB) {
+  page.drawText(text, {
+    x,
+    y: PAGE_HEIGHT - top - size,
+    font,
+    size,
+    color,
+  });
+}
+
+function splitLongWord(word: string, font: PDFFont, size: number, maxWidth: number) {
+  const parts: string[] = [];
+  let current = "";
+
+  for (const char of word) {
+    const candidate = `${current}${char}`;
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth || !current) {
+      current = candidate;
+    } else {
+      parts.push(current);
+      current = char;
+    }
+  }
+
+  if (current) parts.push(current);
+  return parts;
+}
+
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
+  const paragraphs = String(text ?? "")
+    .split(/\n+/)
+    .map((line) => normalizeText(line));
+
+  const lines: string[] = [];
+
+  for (const paragraph of paragraphs) {
+    if (!paragraph) {
+      lines.push("");
+      continue;
+    }
+
+    let current = "";
+    const words = paragraph.split(" ");
+
+    for (const rawWord of words) {
+      const chunks = font.widthOfTextAtSize(rawWord, size) > maxWidth
+        ? splitLongWord(rawWord, font, size, maxWidth)
+        : [rawWord];
+
+      for (const word of chunks) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+          current = candidate;
+        } else {
+          if (current) lines.push(current);
+          current = word;
+        }
+      }
+    }
+
+    if (current) lines.push(current);
+  }
+
+  return lines.length ? lines : [""];
+}
+
+function textBlockHeight(text: string, font: PDFFont, size: number, maxWidth: number, lineHeight: number) {
+  return wrapText(text, font, size, maxWidth).length * lineHeight;
+}
+
+function drawTextBlock(page: PDFPage, text: string, x: number, top: number, width: number, font: PDFFont, size: number, color: RGB, lineHeight: number) {
+  const lines = wrapText(text, font, size, width);
+  lines.forEach((line, index) => drawText(page, line, x, top + index * lineHeight, font, size, color));
+  return lines.length * lineHeight;
+}
+
+async function fetchBinary(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`No se pudo cargar ${url}`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function loadGoogleFont(weight: number) {
+  if (!fontCache.has(weight)) {
+    fontCache.set(weight, (async () => {
+      const cssResponse = await fetch(`https://fonts.googleapis.com/css2?family=Nunito:wght@${weight}&display=swap`);
+      if (!cssResponse.ok) throw new Error("No se pudo cargar la fuente Nunito");
+      const css = await cssResponse.text();
+      const urls = [...css.matchAll(/url\((https:[^)]+)\)/g)].map((match) => match[1]);
+      const fontUrl = urls.at(-1);
+      if (!fontUrl) throw new Error("No se encontró un archivo compatible de Nunito");
+      return fetchBinary(fontUrl);
+    })());
+  }
+
+  return fontCache.get(weight)!;
+}
+
+async function loadFonts(pdf: PDFDocument): Promise<Fonts> {
+  try {
+    pdf.registerFontkit(fontkit);
+    const [regularBytes, boldBytes, blackBytes] = await Promise.all([
+      loadGoogleFont(400),
+      loadGoogleFont(700),
+      loadGoogleFont(900),
+    ]);
+
+    return {
+      regular: await pdf.embedFont(regularBytes),
+      bold: await pdf.embedFont(boldBytes),
+      black: await pdf.embedFont(blackBytes),
+    };
+  } catch {
+    return {
+      regular: await pdf.embedFont(StandardFonts.Helvetica),
+      bold: await pdf.embedFont(StandardFonts.HelveticaBold),
+      black: await pdf.embedFont(StandardFonts.HelveticaBold),
+    };
+  }
+}
+
+async function loadLogo(pdf: PDFDocument) {
+  try {
+    logoCache ??= fetchBinary(new URL(garanticonLogo.url, window.location.origin).toString());
+    const bytes = await logoCache;
+    return await pdf.embedPng(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function addPage(ctx: PdfContext) {
+  ctx.page = ctx.pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  ctx.y = PAGE_PADDING_Y;
+}
+
+function availableHeight(ctx: PdfContext) {
+  return PAGE_HEIGHT - PAGE_PADDING_Y - ctx.y;
+}
+
+function ensureSpace(ctx: PdfContext, height: number) {
+  const usable = PAGE_HEIGHT - PAGE_PADDING_Y * 2;
+  if (height > usable) return;
+  if (height > availableHeight(ctx)) addPage(ctx);
+}
+
+function drawSectionTitle(page: PDFPage, title: string, top: number, fonts: Fonts) {
+  drawText(page, title.toUpperCase(), PAGE_PADDING_X + SECTION_PADDING_X, top, fonts.black, 11, COLORS.dark);
+}
+
+function measureFieldRows(fields: Field[], columns: number, fonts: Fonts, cellWidth: number) {
+  const rows: number[] = [];
+  for (let index = 0; index < fields.length; index += columns) {
+    const row = fields.slice(index, index + columns);
+    const rowHeight = Math.max(...row.map((field) => {
+      const valueHeight = textBlockHeight(field.value, fonts.bold, 10, cellWidth, 12);
+      return 9 + 4 + valueHeight;
+    }));
+    rows.push(rowHeight);
+  }
+  return rows;
+}
+
+function drawFieldSection(ctx: PdfContext, title: string, fields: Field[], columns: number) {
+  const innerWidth = CONTENT_WIDTH - SECTION_PADDING_X * 2;
+  const cellWidth = (innerWidth - (columns - 1) * 16) / columns;
+  const rowHeights = measureFieldRows(fields, columns, ctx.fonts, cellWidth);
+  const sectionHeight = SECTION_PADDING_Y + 14 + 8 + rowHeights.reduce((sum, value) => sum + value, 0) + (rowHeights.length - 1) * 8 + SECTION_PADDING_Y;
+
+  ensureSpace(ctx, sectionHeight + BLOCK_GAP);
+
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, sectionHeight, { color: COLORS.greyLight });
+  drawSectionTitle(ctx.page, title, ctx.y + SECTION_PADDING_Y, ctx.fonts);
+
+  let cursorTop = ctx.y + SECTION_PADDING_Y + 22;
+
+  fields.forEach((field, index) => {
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    const rowTop = ctx.y + SECTION_PADDING_Y + 22 + rowHeights.slice(0, row).reduce((sum, value) => sum + value, 0) + row * 8;
+    const fieldX = PAGE_PADDING_X + SECTION_PADDING_X + col * (cellWidth + 16);
+    drawText(ctx.page, field.label.toUpperCase(), fieldX, rowTop, ctx.fonts.bold, 7.2, COLORS.grey);
+    drawTextBlock(ctx.page, field.value, fieldX, rowTop + 12, cellWidth, ctx.fonts.bold, 10, COLORS.dark, 12);
+    cursorTop = Math.max(cursorTop, rowTop + rowHeights[row]);
+  });
+
+  ctx.y += sectionHeight + BLOCK_GAP;
+}
+
+function drawDeclarationSection(ctx: PdfContext, defectos: string) {
+  const titleHeight = 14;
+  const intro = "El comprador declara que el vehículo ha sido revisado y entregado sin averías conocidas en el momento de la firma, salvo las indicadas a continuación:";
+  const introHeight = textBlockHeight(intro, ctx.fonts.regular, 9, CONTENT_WIDTH - SECTION_PADDING_X * 2, 11.5);
+  const defectHeight = textBlockHeight(defectos, ctx.fonts.bold, 10, CONTENT_WIDTH - SECTION_PADDING_X * 2, 12);
+  const sectionHeight = SECTION_PADDING_Y + titleHeight + 8 + introHeight + 8 + 9 + 4 + defectHeight + SECTION_PADDING_Y;
+
+  ensureSpace(ctx, sectionHeight + BLOCK_GAP);
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, sectionHeight, { color: COLORS.greyLight });
+  drawSectionTitle(ctx.page, "Declaración del estado del vehículo a la entrega", ctx.y + SECTION_PADDING_Y, ctx.fonts);
+  const start = ctx.y + SECTION_PADDING_Y + 20;
+  const used = drawTextBlock(ctx.page, intro, PAGE_PADDING_X + SECTION_PADDING_X, start, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.regular, 9, COLORS.dark, 11.5);
+  drawText(ctx.page, "DEFECTOS PREEXISTENTES DECLARADOS", PAGE_PADDING_X + SECTION_PADDING_X, start + used + 8, ctx.fonts.bold, 7.2, COLORS.grey);
+  drawTextBlock(ctx.page, defectos, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.bold, 10, COLORS.dark, 12);
+  ctx.y += sectionHeight + BLOCK_GAP;
+}
+
+function drawCoverageSection(ctx: PdfContext, title: string, coverage: string, contractLimit: string, accent: { base: RGB; border: RGB; soft: RGB }) {
+  const sectionHeight = 66;
+  ensureSpace(ctx, sectionHeight + BLOCK_GAP);
+
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, sectionHeight, {
+    color: accent.soft,
+    borderColor: accent.base,
+    borderWidth: 1,
+  });
+
+  const leftWidth = 150;
+  const rightGap = 18;
+  const rightWidth = CONTENT_WIDTH - 28 - leftWidth - rightGap;
+  const cellWidth = (rightWidth - 10) / 2;
+  const startX = PAGE_PADDING_X + 14;
+
+  drawText(ctx.page, "MODALIDAD CONTRATADA", startX, ctx.y + 12, ctx.fonts.bold, 8, COLORS.grey);
+  drawText(ctx.page, title, startX, ctx.y + 28, ctx.fonts.black, 17, accent.border);
+
+  const rightX = startX + leftWidth + rightGap;
+  [
+    { value: coverage, label: "Máximo por avería" },
+    { value: contractLimit, label: "Límite total del contrato" },
+  ].forEach((cell, index) => {
+    const x = rightX + index * (cellWidth + 10);
+    const numberWidth = ctx.fonts.black.widthOfTextAtSize(cell.value, 16);
+    drawText(ctx.page, cell.value, x + (cellWidth - numberWidth) / 2, ctx.y + 18, ctx.fonts.black, 16, accent.border);
+    const labelWidth = ctx.fonts.regular.widthOfTextAtSize(cell.label, 8.5);
+    drawText(ctx.page, cell.label, x + (cellWidth - labelWidth) / 2, ctx.y + 40, ctx.fonts.regular, 8.5, COLORS.grey);
+  });
+
+  ctx.y += sectionHeight + BLOCK_GAP;
+}
+
+function getConditions(coverage: string, contractLimit: string): ConditionItem[] {
+  return [
+    {
+      title: "1. Definición de avería",
+      paragraphs: [
+        "Se entiende por avería la incapacidad repentina e inesperada de una pieza cubierta para funcionar conforme a especificación del fabricante, como resultado de un fallo mecánico, eléctrico o electrónico. La reducción gradual de rendimiento por antigüedad, desgaste o kilometraje no se considera avería.",
+      ],
+    },
+    {
+      title: "2. Elementos cubiertos",
+      bullets: [
+        "Motor: bloque motor, tapa de cilindros, bomba de aceite, bomba de agua.",
+        "Caja de cambios: manual o automática, convertidor de par.",
+        "Embrague: mecanismo (no el disco de desgaste).",
+        "Sistema eléctrico: motor de arranque, alternador, módulos electrónicos.",
+        "Dirección: caja/cremallera, bomba de dirección asistida.",
+        "Frenos: servofreno, bomba de freno (no pastillas/discos).",
+        "Alimentación: bomba de combustible, inyectores.",
+        "Ejes y transmisión: palieres, diferencial.",
+        "Refrigeración: radiador, termostato, bomba de agua.",
+        "Aire acondicionado: compresor, condensador.",
+      ],
+      paragraphs: [
+        "Cualquier componente, pieza o sistema no expresamente listado en este apartado queda excluido de la cobertura.",
+      ],
+    },
+    {
+      title: "3. Carencia",
+      paragraphs: [
+        "Esta garantía entra en vigor 15 días o 1.000 km después de la fecha de contratación, lo que ocurra primero. Las averías producidas durante este periodo no están cubiertas. A efectos de determinar si una avería está dentro del periodo de cobertura, se tomará como referencia la fecha en que se produce la avería, y no la de su comunicación, siempre que esta se realice dentro del plazo establecido en el punto 5.",
+      ],
+    },
+    {
+      title: "4. Mantenimiento obligatorio",
+      paragraphs: [
+        "El titular se compromete a realizar el mantenimiento del vehículo según las indicaciones del fabricante, con una periodicidad máxima de 12 meses o 12.000 km. El incumplimiento de esta obligación, debidamente acreditado, faculta a Garanticon para rechazar la cobertura de aquellas averías que guarden relación causal con dicho incumplimiento. Si el incumplimiento afecta de forma general al estado mecánico del vehículo, Garanticon podrá rechazar la cobertura de la garantía en su totalidad. El titular deberá conservar y, en caso de reclamación, presentar facturas o justificantes que acrediten el cumplimiento de este mantenimiento.",
+      ],
+    },
+    {
+      title: "5. Procedimiento ante una avería",
+      paragraphs: [
+        "El titular debe comunicar la avería a Garanticon en un plazo máximo de 3 días desde su detección, y obtener autorización previa antes de iniciar cualquier reparación. Las reparaciones realizadas sin autorización previa no serán objeto de cobertura. Si Garanticon no responde a la solicitud de autorización en un plazo de 48 horas laborables, el titular podrá proceder con la reparación aportando presupuesto previo, que será valorado conforme a las condiciones de esta garantía. En caso de avería que impida el uso seguro del vehículo fuera del horario de atención de Garanticon, el titular podrá proceder a la reparación urgente mínima necesaria, debiendo notificarlo a Garanticon en un plazo máximo de 24 horas junto con factura detallada para su valoración.",
+      ],
+    },
+    {
+      title: "6. Exclusiones",
+      paragraphs: ["No están cubiertos:"],
+      bullets: [
+        "Daños derivados de negligencia grave acreditada del titular, accidente, uso indebido o manipulación del kilometraje.",
+        "Piezas de desgaste normal: aceite, filtros, líquidos, pastillas y discos de freno, neumáticos, escobillas, bujías, correas (salvo correa de distribución por rotura mecánica).",
+        "Daños consecuenciales: si una pieza no cubierta falla y daña por efecto una pieza cubierta, ese daño derivado no está incluido.",
+        "Averías cubiertas por la garantía del fabricante o por otro seguro vigente.",
+        "Gastos de diagnóstico cuando la avería resulte no estar cubierta.",
+        "Reparaciones realizadas sin autorización previa de Garanticon.",
+        "Daños a terceros, lesiones o responsabilidad civil derivada del uso del vehículo.",
+      ],
+    },
+    {
+      title: "7. Averías independientes",
+      paragraphs: [
+        "Se consideran averías independientes aquellas que, a juicio técnico, tienen causas distintas y sin relación directa entre sí. Cada avería independiente dispone de su propio límite de cobertura según el resumen de cobertura anterior.",
+      ],
+    },
+    {
+      title: "8. Ámbito territorial",
+      paragraphs: [
+        "La cobertura es válida en territorio español. Para asistencia fuera de España, el titular debe contactar previamente con Garanticon para confirmar la cobertura aplicable.",
+      ],
+    },
+    {
+      title: "9. Transmisión del vehículo",
+      paragraphs: [
+        "Esta garantía es personal e intransferible, salvo autorización expresa y por escrito de Garanticon en caso de venta del vehículo a un tercero durante la vigencia del contrato.",
+      ],
+    },
+    {
+      title: "10. Jurisdicción",
+      paragraphs: [
+        "Para cualquier controversia derivada de este contrato, las partes se someten a los Juzgados y Tribunales de San Sebastián de los Reyes (Madrid), sin perjuicio de los derechos que la normativa de consumo reconozca al consumidor.",
+      ],
+    },
+    {
+      title: "Conformidad con el alcance económico de tu garantía",
+      paragraphs: [
+        `El precio de esta garantía está calculado en base a los límites económicos descritos en este contrato: ${coverage} máximo por avería y ${contractLimit} máximo acumulado durante toda la vigencia.`,
+        `Estos límites no son una restricción añadida después — son la base sobre la que se ha fijado el precio que has pagado. Por ejemplo: si una avería cubierta conforme a las secciones 1 a 8 de este contrato cuesta 6.000€ de reparación y tu garantía cubre hasta ${coverage}, Garanticon abona ${coverage} y la diferencia corre a tu cargo.`,
+        "Una vez alcanzado el límite total acumulado, la garantía queda agotada, independientemente del número de averías o del tiempo restante de cobertura.",
+        "Declaro que he sido informado de estos límites antes de firmar, que los he entendido, y que el precio pagado por esta garantía se corresponde con el alcance de cobertura aquí descrito, formando estos límites parte esencial del objeto del contrato.",
+      ],
+    },
+  ];
+}
+
+function measureConditionItem(item: ConditionItem, fonts: Fonts, width: number) {
+  let height = 8 + 12;
+
+  for (const paragraph of item.paragraphs ?? []) {
+    height += textBlockHeight(paragraph, fonts.regular, 8.5, width - 16, 10.7) + 4;
+  }
+
+  for (const bullet of item.bullets ?? []) {
+    height += textBlockHeight(bullet, fonts.regular, 8.3, width - 28, 10.4) + 3;
+  }
+
+  return height + 8;
+}
+
+function drawConditionItem(page: PDFPage, item: ConditionItem, x: number, top: number, width: number, fonts: Fonts) {
+  const height = measureConditionItem(item, fonts, width);
+  drawRect(page, x, top, width, height, { color: COLORS.greyLight });
+
+  let cursor = top + 8;
+  drawText(page, item.title, x + 8, cursor, fonts.black, 9, COLORS.dark);
+  cursor += 14;
+
+  for (const paragraph of item.paragraphs ?? []) {
+    cursor += drawTextBlock(page, paragraph, x + 8, cursor, width - 16, fonts.regular, 8.5, COLORS.dark, 10.7);
+    cursor += 4;
+  }
+
+  for (const bullet of item.bullets ?? []) {
+    drawText(page, "–", x + 8, cursor, fonts.bold, 8.5, COLORS.dark);
+    cursor += drawTextBlock(page, bullet, x + 18, cursor, width - 28, fonts.regular, 8.3, COLORS.dark, 10.4);
+    cursor += 3;
+  }
+
+  return height;
+}
+
+function drawConditionsHeading(ctx: PdfContext, continued = false) {
+  const title = continued ? "Condiciones de la garantía (continuación)" : "Condiciones de la garantía";
+  const headingHeight = 22;
+  ensureSpace(ctx, headingHeight + BLOCK_GAP);
+  drawText(ctx.page, title.toUpperCase(), PAGE_PADDING_X, ctx.y, ctx.fonts.black, 11, COLORS.dark);
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y + 16, CONTENT_WIDTH, 1, { color: COLORS.orange });
+  ctx.y += headingHeight;
+}
+
+function drawConditionsSection(ctx: PdfContext, items: ConditionItem[]) {
+  drawConditionsHeading(ctx, false);
+
+  const columnTop = ctx.y;
+  const columnWidth = (CONTENT_WIDTH - COLUMN_GAP) / 2;
+  let column = 0;
+  let leftY = columnTop;
+  let rightY = columnTop;
+
+  const resetColumns = () => {
+    column = 0;
+    leftY = ctx.y;
+    rightY = ctx.y;
+  };
+
+  const newConditionsPage = () => {
+    addPage(ctx);
+    drawConditionsHeading(ctx, true);
+    resetColumns();
+  };
+
+  resetColumns();
+
+  for (const item of items) {
+    const itemHeight = measureConditionItem(item, ctx.fonts, columnWidth);
+
+    while (true) {
+      const currentTop = column === 0 ? leftY : rightY;
+      const spaceLeft = PAGE_HEIGHT - PAGE_PADDING_Y - currentTop;
+
+      if (itemHeight <= spaceLeft) {
+        const x = PAGE_PADDING_X + column * (columnWidth + COLUMN_GAP);
+        drawConditionItem(ctx.page, item, x, currentTop, columnWidth, ctx.fonts);
+        if (column === 0) {
+          leftY += itemHeight + 6;
+        } else {
+          rightY += itemHeight + 6;
+        }
+        break;
+      }
+
+      if (column === 0) {
+        column = 1;
+      } else {
+        newConditionsPage();
+      }
+    }
+  }
+
+  ctx.y = Math.max(leftY, rightY) + BLOCK_GAP;
+}
+
+function drawSignatures(ctx: PdfContext, data: ContractData, coverage: string, contractLimit: string) {
+  const leftWidth = CONTENT_WIDTH * 0.58;
+  const gap = 12;
+  const rightWidth = CONTENT_WIDTH - leftWidth - gap;
+  const textWidth = leftWidth - 24;
+  const paragraphs = [
+    `El precio de esta garantía está calculado en base a los límites económicos descritos en este contrato: ${coverage} máximo por avería y ${contractLimit} máximo acumulado durante toda la vigencia.`,
+    `Estos límites no son una restricción añadida después — son la base sobre la que se ha fijado el precio que has pagado. Por ejemplo: si una avería cubierta conforme a las secciones 1 a 8 de este contrato cuesta 6.000€ de reparación y tu garantía cubre hasta ${coverage}, Garanticon abona ${coverage} y la diferencia corre a tu cargo.`,
+    "Una vez alcanzado el límite total acumulado, la garantía queda agotada, independientemente del número de averías o del tiempo restante de cobertura.",
+    "Declaro que he sido informado de estos límites antes de firmar, que los he entendido, y que el precio pagado por esta garantía se corresponde con el alcance de cobertura aquí descrito, formando estos límites parte esencial del objeto del contrato.",
+  ];
+
+  const leftHeight = 12 + 12 + paragraphs.reduce((sum, paragraph) => sum + textBlockHeight(paragraph, ctx.fonts.regular, 8.5, textWidth, 10.7) + 5, 0) + 18 + 24 + 28;
+  const signatureBoxHeight = 84;
+  const rightHeight = signatureBoxHeight * 2 + 8;
+  const blockHeight = Math.max(leftHeight, rightHeight);
+
+  ensureSpace(ctx, blockHeight + BLOCK_GAP + 28);
+
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, leftWidth, leftHeight, { color: COLORS.blueLight, borderColor: COLORS.blue, borderWidth: 1 });
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, 4, leftHeight, { color: COLORS.blue });
+  let cursor = ctx.y + 10;
+  drawText(ctx.page, "CONFORMIDAD CON EL ALCANCE ECONÓMICO DE TU GARANTÍA", PAGE_PADDING_X + 12, cursor, ctx.fonts.black, 9.5, COLORS.blue);
+  cursor += 16;
+
+  for (const paragraph of paragraphs) {
+    cursor += drawTextBlock(ctx.page, paragraph, PAGE_PADDING_X + 12, cursor, textWidth, ctx.fonts.regular, 8.5, COLORS.dark, 10.7);
+    cursor += 5;
+  }
+
+  drawRect(ctx.page, PAGE_PADDING_X + 12, cursor + 1, 10, 10, { borderColor: COLORS.blue, borderWidth: 1 });
+  drawText(ctx.page, "He leído y entiendo el alcance económico de mi garantía", PAGE_PADDING_X + 28, cursor, ctx.fonts.bold, 8.5, COLORS.dark);
+  cursor += 18;
+
+  const rowWidth = textWidth;
+  const cellGap = 8;
+  const firmaWidth = rowWidth * 0.5;
+  const otherWidth = (rowWidth - firmaWidth - cellGap * 2) / 2;
+  [
+    { x: PAGE_PADDING_X + 12, width: firmaWidth, label: "Firma" },
+    { x: PAGE_PADDING_X + 12 + firmaWidth + cellGap, width: otherWidth, label: "Fecha" },
+    { x: PAGE_PADDING_X + 12 + firmaWidth + cellGap + otherWidth + cellGap, width: otherWidth, label: "Hora" },
+  ].forEach((cell) => {
+    drawText(ctx.page, cell.label.toUpperCase(), cell.x, cursor, ctx.fonts.bold, 7.2, COLORS.grey);
+    drawRect(ctx.page, cell.x, cursor + 14, cell.width, 0.8, { color: COLORS.dark });
+  });
+
+  const rightX = PAGE_PADDING_X + leftWidth + gap;
+  [
+    {
+      title: "Firma del vendedor",
+      who: v(data.vendedor_empresa),
+      caption: "Nombre, cargo y firma",
+      top: ctx.y,
+    },
+    {
+      title: "Firma del comprador",
+      who: `${v(data.comprador_nombre)} · DNI ${v(data.comprador_dni)}`,
+      caption: "Firma del titular del contrato",
+      top: ctx.y + signatureBoxHeight + 8,
+    },
+  ].forEach((box) => {
+    drawRect(ctx.page, rightX, box.top, rightWidth, signatureBoxHeight, { color: COLORS.greyLight });
+    drawText(ctx.page, box.title.toUpperCase(), rightX + 12, box.top + 10, ctx.fonts.black, 9, COLORS.dark);
+    drawTextBlock(ctx.page, box.who, rightX + 12, box.top + 26, rightWidth - 24, ctx.fonts.bold, 10, COLORS.dark, 12);
+    drawRect(ctx.page, rightX + 12, box.top + 58, rightWidth - 24, 0.8, { color: COLORS.dark });
+    drawText(ctx.page, box.caption, rightX + 12, box.top + 64, ctx.fonts.regular, 8, COLORS.grey);
+  });
+
+  ctx.y += blockHeight + BLOCK_GAP;
+}
+
+function drawFooter(ctx: PdfContext) {
+  const footerLines = [
+    "GARANTICON es una marca comercial respaldada por Cabrick Automoción S.L. (CIF B01593748, Avda. Somosierra 12, 28703 San Sebastián de los Reyes, Madrid), entidad garante de las obligaciones derivadas de este contrato.",
+    "Este documento constituye un contrato vinculante entre las partes indicadas. Conserve una copia para su consulta.",
+  ];
+  const footerHeight = footerLines.reduce((sum, line) => sum + textBlockHeight(line, ctx.fonts.regular, 7.4, CONTENT_WIDTH, 9), 0) + 10;
+
+  ensureSpace(ctx, footerHeight);
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, 0.8, { color: COLORS.greyBorder });
+  let cursor = ctx.y + 8;
+  footerLines.forEach((line) => {
+    const lines = wrapText(line, ctx.fonts.regular, 7.4, CONTENT_WIDTH);
+    lines.forEach((wrapped, index) => {
+      const lineWidth = ctx.fonts.regular.widthOfTextAtSize(wrapped, 7.4);
+      drawText(ctx.page, wrapped, PAGE_PADDING_X + (CONTENT_WIDTH - lineWidth) / 2, cursor + index * 9, ctx.fonts.regular, 7.4, COLORS.grey);
+    });
+    cursor += lines.length * 9;
+  });
+}
+
+function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, fechaContrato: string, accent: { base: RGB }) {
+  const headerHeight = 72;
+  drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, headerHeight, { color: COLORS.dark });
+
+  const leftX = PAGE_PADDING_X + 16;
+  const top = ctx.y + 14;
+
+  if (ctx.logo) {
+    const targetHeight = 26;
+    const scale = targetHeight / ctx.logo.height;
+    ctx.page.drawImage(ctx.logo, {
+      x: leftX,
+      y: topToPdfY(top, targetHeight),
+      width: ctx.logo.width * scale,
+      height: targetHeight,
+    });
+  } else {
+    drawText(ctx.page, "garanti", leftX, top + 4, ctx.fonts.black, 18, COLORS.orange);
+    const garantiWidth = ctx.fonts.black.widthOfTextAtSize("garanti", 18);
+    drawText(ctx.page, "con", leftX + garantiWidth, top + 4, ctx.fonts.black, 18, COLORS.purple);
+  }
+
+  drawText(ctx.page, "Contrato de Garantía Mecánica", leftX, ctx.y + 46, ctx.fonts.regular, 9, rgb(0.8, 0.84, 0.88));
+
+  const pillText = `GARANTICON ${tierLabel}`;
+  const pillFontSize = 12.5;
+  const pillPaddingX = 12;
+  const pillWidth = ctx.fonts.black.widthOfTextAtSize(pillText, pillFontSize) + pillPaddingX * 2;
+  const pillX = PAGE_PADDING_X + CONTENT_WIDTH - pillWidth - 16;
+  drawRect(ctx.page, pillX, ctx.y + 12, pillWidth, 24, { color: accent.base });
+  drawText(ctx.page, pillText, pillX + pillPaddingX, ctx.y + 19, ctx.fonts.black, pillFontSize, COLORS.white);
+
+  const meta = `Contrato Nº ${contractNumber} · Fecha: ${fechaContrato}`;
+  const metaWidth = ctx.fonts.regular.widthOfTextAtSize(meta, 8.5);
+  drawText(ctx.page, meta, PAGE_PADDING_X + CONTENT_WIDTH - metaWidth - 16, ctx.y + 46, ctx.fonts.regular, 8.5, rgb(0.8, 0.84, 0.88));
+
+  ctx.y += headerHeight + BLOCK_GAP;
+}
+
+export async function generateContractPdf(data: ContractData, filename?: string): Promise<Blob> {
+  const pdf = await PDFDocument.create();
+  const fonts = await loadFonts(pdf);
+  const logo = await loadLogo(pdf);
+  const ctx: PdfContext = {
+    pdf,
+    page: pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
+    fonts,
+    logo,
+    y: PAGE_PADDING_Y,
+  };
+
+  const tier = TIER[data.modalidad] ?? TIER.ESENCIAL;
+  const coverage = fmtEUR(data.limite_averia != null ? Number(data.limite_averia) : tier.cobertura);
+  const contractLimit = fmtEUR(data.precio_venta);
   const fechaContrato = data.aceptacion_fecha
     ? format(new Date(data.aceptacion_fecha), "dd/MM/yyyy HH:mm")
     : format(new Date(), "dd/MM/yyyy HH:mm");
-
   const direccionComprador = [
     data.comprador_direccion,
     [data.comprador_cp, data.comprador_poblacion].filter(Boolean).join(" "),
     data.comprador_provincia,
-  ].filter((s) => s && String(s).trim()).join(", ") || "—";
-
+  ].filter((part) => normalizeText(part)).join(", ") || "—";
   const contactoComprador = [data.comprador_telefono, data.comprador_email].filter(Boolean).join(" · ") || "—";
   const contactoVendedor = [data.vendedor_telefono, data.vendedor_email].filter(Boolean).join(" · ") || "—";
 
-  return /* html */ `<!doctype html>
-<html lang="es"><head>
-<meta charset="utf-8" />
-<title>Garanticon ${esc(t.nombre)} — Contrato ${esc(data.numero_poliza)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --accent:${t.accent}; --accent-dark:${t.accentDark}; --accent-light:${t.accentLight};
-    --orange:#F97316; --purple:#7C3AED; --dark:#1C1C2E; --grey:#6B7280; --grey-light:#F3F4F6;
-    --blue:#1E40AF; --blue-light:#EFF6FF;
-  }
-  @page { size: A4 portrait; margin: 10mm; }
-  *,*::before,*::after{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; background:#fff; color:var(--dark);
-    font-family:'Nunito',system-ui,sans-serif; font-size:10px; line-height:1.45; }
-  .doc{ width:190mm; margin:0 auto; }
-  .block{ margin-bottom:8px; break-inside:avoid; page-break-inside:avoid; }
-  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; }
-  .grid-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px 16px; }
-  .field{ display:flex; flex-direction:column; }
-  .field .lbl{ font-size:8px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:.04em; }
-  .field .val{ font-size:10px; font-weight:700; color:var(--dark); word-break:break-word; }
-  .section{ background:var(--grey-light); border-radius:8px; padding:10px 12px; }
-  .section h3{ margin:0 0 6px; font-size:11px; font-weight:800; color:var(--dark); text-transform:uppercase; letter-spacing:.05em; }
+  drawHeader(ctx, tier.nombre, data.numero_poliza, fechaContrato, { base: hex(tier.accent) });
 
-  /* Cabecera */
-  .hdr{ display:flex; align-items:center; justify-content:space-between; gap:12px;
-        background:var(--dark); color:#fff; border-radius:10px; padding:14px 16px; }
-  .hdr .brand{ display:flex; align-items:center; gap:10px; }
-  .hdr .shield{ width:32px; height:36px; border-radius:6px 6px 14px 14px; background:var(--purple);
-                display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:16px; }
-  .hdr .brand .name{ font-size:20px; font-weight:900; color:var(--orange); line-height:1; }
-  .hdr .brand .sub{ font-size:9px; color:#cbd5e1; margin-top:2px; }
-  .hdr .badge{ text-align:right; }
-  .hdr .badge .pill{ display:inline-block; background:var(--accent); color:#fff; font-weight:900;
-                     padding:6px 12px; border-radius:999px; font-size:13px; letter-spacing:.04em; }
-  .hdr .badge .meta{ margin-top:6px; font-size:9px; color:#cbd5e1; }
+  drawFieldSection(ctx, "Datos del vendedor", [
+    { label: "Razón social", value: v(data.vendedor_empresa) },
+    { label: "CIF", value: v(data.vendedor_cif) },
+    { label: "Dirección", value: v(data.vendedor_direccion) },
+    { label: "Contacto", value: contactoVendedor },
+  ], 2);
 
-  /* Cobertura */
-  .cover{ display:flex; gap:16px; align-items:stretch;
-          background:var(--accent-light); border:1px solid var(--accent); border-radius:10px; padding:12px 14px; }
-  .cover .left{ flex:1; }
-  .cover .left .lbl{ font-size:9px; color:var(--grey); text-transform:uppercase; font-weight:700; }
-  .cover .left .mod{ font-size:18px; font-weight:900; color:var(--accent-dark); margin-top:2px; }
-  .cover .right{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; flex:2; }
-  .cover .right .cell{ text-align:center; }
-  .cover .right .num{ font-size:16px; font-weight:900; color:var(--accent-dark); }
-  .cover .right .cap{ font-size:8.5px; color:var(--grey); margin-top:2px; }
+  drawFieldSection(ctx, "Datos del comprador", [
+    { label: "Nombre completo", value: v(data.comprador_nombre) },
+    { label: "DNI / NIE", value: v(data.comprador_dni) },
+    { label: "Dirección", value: direccionComprador },
+    { label: "Contacto", value: contactoComprador },
+  ], 2);
 
-  /* Condiciones — 2 columnas */
-  .cond{ font-size:8.5px; line-height:1.4; }
-  .cond .cols{ column-count:2; column-gap:14px; }
-  .cond .item{ break-inside:avoid; margin-bottom:6px; }
-  .cond .item h4{ margin:0 0 2px; font-size:9px; font-weight:800; color:var(--dark); }
-  .cond ul{ margin:2px 0 0 14px; padding:0; }
-  .cond ul li{ margin-bottom:1px; }
+  drawFieldSection(ctx, "Datos del vehículo", [
+    { label: "Marca y modelo", value: `${normalizeText(data.vehiculo_marca)} ${normalizeText(data.vehiculo_modelo)}`.trim() || "—" },
+    { label: "Matrícula", value: v(data.matricula) },
+    { label: "VIN / Nº bastidor", value: v(data.bastidor) },
+    { label: "Fecha de matriculación", value: fmtDate(data.fecha_matriculacion) },
+    { label: "Kilometraje", value: data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")} km` : "—" },
+    { label: "Valor de tasación", value: fmtEUR(data.precio_venta) },
+  ], 3);
 
-  /* Firmas */
-  .firmas{ display:grid; grid-template-columns:1.3fr 1fr; gap:10px; }
-  .conformidad{ background:var(--blue-light); border-left:4px solid var(--blue); border-radius:6px; padding:10px 12px; font-size:8.5px; line-height:1.4; }
-  .conformidad h3{ margin:0 0 4px; font-size:10px; font-weight:800; color:var(--blue); }
-  .conformidad p{ margin:0 0 4px; }
-  .conformidad .firma-row{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; margin-top:8px; padding-top:6px; border-top:1px solid #cbd5e1; }
-  .conformidad .firma-row .lbl{ font-size:8px; color:var(--grey); }
-  .conformidad .firma-row .line{ border-bottom:1px solid var(--dark); height:18px; }
-  .check{ display:flex; align-items:center; gap:6px; margin-top:6px; font-weight:700; font-size:8.5px; }
-  .check .box{ width:10px; height:10px; border:1px solid var(--blue); border-radius:2px; display:inline-block; }
-  .firmas .stack{ display:flex; flex-direction:column; gap:8px; }
-  .firma-box{ background:var(--grey-light); border-radius:8px; padding:10px 12px; }
-  .firma-box .ttl{ font-size:9px; font-weight:800; color:var(--dark); text-transform:uppercase; }
-  .firma-box .who{ font-size:10px; font-weight:700; margin-top:2px; }
-  .firma-box .line{ border-bottom:1px solid var(--dark); height:24px; margin-top:10px; }
-  .firma-box .cap{ font-size:8px; color:var(--grey); margin-top:2px; }
+  drawFieldSection(ctx, "Vigencia del contrato", [
+    { label: "Fecha de inicio", value: fmtDate(data.fecha_inicio) },
+    { label: "Fecha de finalización", value: fmtDate(data.fecha_fin) },
+  ], 2);
 
-  /* Pie */
-  .foot{ margin-top:10px; padding-top:6px; border-top:1px solid #e5e7eb; text-align:center; color:var(--grey); font-size:7.5px; line-height:1.5; }
-</style>
-</head><body>
-<div class="doc">
+  drawDeclarationSection(ctx, v(data.defectos_preexistentes) === "—" ? "NINGUNO" : normalizeText(data.defectos_preexistentes));
+  drawCoverageSection(ctx, `GARANTICON ${tier.nombre}`, coverage, contractLimit, {
+    base: hex(tier.accent),
+    border: hex(tier.accentDark),
+    soft: hex(tier.accentLight),
+  });
 
-  <div class="block hdr">
-    <div class="brand">
-      <img src="${window.location.origin}/__l5e/assets-v1/8d7e802b-b694-474f-93da-85a98526dfe6/garanticon-logo.png" alt="garanticon" style="height:42px;width:auto;display:block;" crossorigin="anonymous" />
-      <div>
-        <div class="sub">Contrato de Garantía Mecánica</div>
-      </div>
-    </div>
-    <div class="badge">
-      <div class="pill">GARANTICON ${esc(t.nombre)}</div>
-      <div class="meta">Contrato Nº ${esc(data.numero_poliza)} · Fecha: ${esc(fechaContrato)}</div>
-    </div>
-  </div>
+  drawConditionsSection(ctx, getConditions(coverage, contractLimit).slice(0, 10));
+  drawSignatures(ctx, data, coverage, contractLimit);
+  drawFooter(ctx);
 
-  <div class="block section">
-    <h3>Datos del vendedor</h3>
-    <div class="grid-2">
-      <div class="field"><span class="lbl">Razón social</span><span class="val">${esc(v(data.vendedor_empresa))}</span></div>
-      <div class="field"><span class="lbl">CIF</span><span class="val">${esc(v(data.vendedor_cif))}</span></div>
-      <div class="field"><span class="lbl">Dirección</span><span class="val">${esc(v(data.vendedor_direccion))}</span></div>
-      <div class="field"><span class="lbl">Contacto</span><span class="val">${esc(contactoVendedor)}</span></div>
-    </div>
-  </div>
-
-  <div class="block section">
-    <h3>Datos del comprador</h3>
-    <div class="grid-2">
-      <div class="field"><span class="lbl">Nombre completo</span><span class="val">${esc(v(data.comprador_nombre))}</span></div>
-      <div class="field"><span class="lbl">DNI / NIE</span><span class="val">${esc(v(data.comprador_dni))}</span></div>
-      <div class="field"><span class="lbl">Dirección</span><span class="val">${esc(direccionComprador)}</span></div>
-      <div class="field"><span class="lbl">Contacto</span><span class="val">${esc(contactoComprador)}</span></div>
-    </div>
-  </div>
-
-  <div class="block section">
-    <h3>Datos del vehículo</h3>
-    <div class="grid-3">
-      <div class="field"><span class="lbl">Marca y modelo</span><span class="val">${esc(`${data.vehiculo_marca ?? ""} ${data.vehiculo_modelo ?? ""}`.trim() || "—")}</span></div>
-      <div class="field"><span class="lbl">Matrícula</span><span class="val">${esc(v(data.matricula))}</span></div>
-      <div class="field"><span class="lbl">VIN / Nº bastidor</span><span class="val">${esc(v(data.bastidor))}</span></div>
-      <div class="field"><span class="lbl">Año de matriculación</span><span class="val">${esc(fmtDate(data.fecha_matriculacion))}</span></div>
-      <div class="field"><span class="lbl">Kilometraje</span><span class="val">${data.km_venta != null ? esc(Number(data.km_venta).toLocaleString("es-ES") + " km") : "—"}</span></div>
-      <div class="field"><span class="lbl">Valor de tasación</span><span class="val">${esc(fmtEUR(data.precio_venta))}</span></div>
-    </div>
-  </div>
-
-  <div class="block section">
-    <h3>Vigencia del contrato</h3>
-    <div class="grid-2">
-      <div class="field"><span class="lbl">Fecha de inicio</span><span class="val">${esc(fmtDate(data.fecha_inicio))}</span></div>
-      <div class="field"><span class="lbl">Fecha de finalización</span><span class="val">${esc(fmtDate(data.fecha_fin))}</span></div>
-    </div>
-  </div>
-
-  <div class="block section">
-    <h3>Declaración del estado del vehículo a la entrega</h3>
-    <p style="margin:0 0 6px;">El comprador declara que el vehículo ha sido revisado y entregado sin averías conocidas en el momento de la firma, salvo las indicadas a continuación:</p>
-    <div class="field"><span class="lbl">Defectos preexistentes declarados</span><span class="val">${esc(v(data.defectos_preexistentes) === "—" ? "NINGUNO" : data.defectos_preexistentes!)}</span></div>
-  </div>
-
-  <div class="block cover">
-    <div class="left">
-      <div class="lbl">Modalidad contratada</div>
-      <div class="mod">GARANTICON ${esc(t.nombre)}</div>
-    </div>
-    <div class="right">
-      <div class="cell"><div class="num">${esc(fmtEUR(cobertura))}</div><div class="cap">Máximo por avería</div></div>
-      <div class="cell"><div class="num">${esc(fmtEUR(data.precio_venta))}</div><div class="cap">Límite total del contrato</div></div>
-      <div class="cell"><div class="num">${esc(fmtEUR(data.precio_venta))}</div><div class="cap">Precio de esta garantía</div></div>
-    </div>
-  </div>
-
-  <div class="block section cond">
-    <h3>Condiciones de la garantía</h3>
-    <div class="cols">
-      <div class="item"><h4>1. Definición de avería</h4>
-        <p>Se entiende por avería la incapacidad repentina e inesperada de una pieza cubierta para funcionar conforme a especificación del fabricante, como resultado de un fallo mecánico, eléctrico o electrónico. La reducción gradual de rendimiento por antigüedad, desgaste o kilometraje no se considera avería.</p>
-      </div>
-      <div class="item"><h4>2. Elementos cubiertos</h4>
-        <ul>
-          <li><b>Motor:</b> bloque motor, tapa de cilindros, bomba de aceite, bomba de agua.</li>
-          <li><b>Caja de cambios:</b> manual o automática, convertidor de par.</li>
-          <li><b>Embrague:</b> mecanismo (no el disco de desgaste).</li>
-          <li><b>Sistema eléctrico:</b> motor de arranque, alternador, módulos electrónicos.</li>
-          <li><b>Dirección:</b> caja/cremallera, bomba de dirección asistida.</li>
-          <li><b>Frenos:</b> servofreno, bomba de freno (no pastillas/discos).</li>
-          <li><b>Alimentación:</b> bomba de combustible, inyectores.</li>
-          <li><b>Ejes y transmisión:</b> palieres, diferencial.</li>
-          <li><b>Refrigeración:</b> radiador, termostato, bomba de agua.</li>
-          <li><b>Aire acondicionado:</b> compresor, condensador.</li>
-        </ul>
-        <p style="margin-top:3px;">Cualquier componente, pieza o sistema no expresamente listado en este apartado queda excluido de la cobertura.</p>
-      </div>
-      <div class="item"><h4>3. Carencia</h4>
-        <p>Esta garantía entra en vigor 15 días o 1.000 km después de la fecha de contratación, lo que ocurra primero. Las averías producidas durante este periodo no están cubiertas.</p>
-      </div>
-      <div class="item"><h4>4. Mantenimiento obligatorio</h4>
-        <p>El titular se compromete a realizar el mantenimiento del vehículo según las indicaciones del fabricante, con una periodicidad máxima de 12 meses o 12.000 km. El incumplimiento de esta obligación, debidamente acreditado, anula la cobertura de esta garantía en su totalidad. El titular deberá conservar y, en caso de reclamación, presentar facturas o justificantes que acrediten el cumplimiento de este mantenimiento.</p>
-      </div>
-      <div class="item"><h4>5. Procedimiento ante una avería</h4>
-        <p>El titular debe comunicar la avería a Garanticon en un plazo máximo de 3 días desde su detección, y obtener autorización previa antes de iniciar cualquier reparación. Las reparaciones realizadas sin autorización previa no serán objeto de cobertura. En caso de avería que impida el uso seguro del vehículo fuera del horario de atención de Garanticon, el titular podrá proceder a la reparación urgente mínima necesaria, debiendo notificarlo a Garanticon en un plazo máximo de 24 horas junto con factura detallada para su valoración.</p>
-      </div>
-      <div class="item"><h4>6. Exclusiones</h4>
-        <p>No están cubiertos:</p>
-        <ul>
-          <li>Piezas de desgaste normal: aceite, filtros, líquidos, pastillas y discos de freno, neumáticos, escobillas, bujías, correas (salvo correa de distribución por rotura mecánica).</li>
-          <li>Daños derivados de negligencia, accidente, uso indebido o manipulación del kilometraje.</li>
-          <li>Daños consecuenciales: si una pieza no cubierta falla y daña por efecto una pieza cubierta, ese daño derivado no está incluido.</li>
-          <li>Averías cubiertas por la garantía del fabricante o por otro seguro vigente.</li>
-          <li>Gastos de diagnóstico cuando la avería resulte no estar cubierta.</li>
-          <li>Reparaciones realizadas sin autorización previa de Garanticon.</li>
-          <li>Daños a terceros, lesiones o responsabilidad civil derivada del uso del vehículo.</li>
-        </ul>
-      </div>
-      <div class="item"><h4>7. Averías independientes</h4>
-        <p>Se consideran averías independientes aquellas que, a juicio técnico, tienen causas distintas y sin relación directa entre sí. Cada avería independiente dispone de su propio límite de cobertura según el resumen de cobertura anterior.</p>
-      </div>
-      <div class="item"><h4>8. Ámbito territorial</h4>
-        <p>La cobertura es válida en territorio español. Para asistencia fuera de España, el titular debe contactar previamente con Garanticon para confirmar la cobertura aplicable.</p>
-      </div>
-      <div class="item"><h4>9. Transmisión del vehículo</h4>
-        <p>Esta garantía es personal e intransferible, salvo autorización expresa y por escrito de Garanticon en caso de venta del vehículo a un tercero durante la vigencia del contrato.</p>
-      </div>
-      <div class="item"><h4>10. Jurisdicción</h4>
-        <p>Para cualquier controversia derivada de este contrato, las partes se someten a los Juzgados y Tribunales de San Sebastián de los Reyes (Madrid), sin perjuicio de los derechos que la normativa de consumo reconozca al consumidor.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="block firmas">
-    <div class="conformidad">
-      <h3>Conformidad con el alcance económico de tu garantía</h3>
-      <p>El precio de esta garantía está calculado en base a los límites económicos descritos en este contrato: <b>${esc(fmtEUR(cobertura))}</b> máximo por avería y <b>${esc(fmtEUR(data.precio_venta))}</b> máximo acumulado durante toda la vigencia.</p>
-      <p>Estos límites no son una restricción añadida después — son la base sobre la que se ha fijado el precio que has pagado. Por ejemplo: si una avería cubierta conforme a las secciones 1 a 8 de este contrato cuesta 6.000€ de reparación y tu garantía cubre hasta ${esc(fmtEUR(cobertura))}, Garanticon abona ${esc(fmtEUR(cobertura))} y la diferencia corre a tu cargo.</p>
-      <p>Una vez alcanzado el límite total acumulado, la garantía queda agotada, independientemente del número de averías o del tiempo restante de cobertura.</p>
-      <p>Declaro que he sido informado de estos límites antes de firmar, que los he entendido, que el precio pagado se corresponde con ellos, y que no presentaré reclamaciones por cantidades que los superen.</p>
-      <div class="check"><span class="box"></span> He leído y entiendo el alcance económico de mi garantía</div>
-      <div class="firma-row">
-        <div><div class="lbl">Firma</div><div class="line"></div></div>
-        <div><div class="lbl">Fecha</div><div class="line"></div></div>
-        <div><div class="lbl">Hora</div><div class="line"></div></div>
-      </div>
-    </div>
-    <div class="stack">
-      <div class="firma-box">
-        <div class="ttl">Firma del vendedor</div>
-        <div class="who">${esc(v(data.vendedor_empresa))}</div>
-        <div class="line"></div>
-        <div class="cap">Nombre, cargo y firma</div>
-      </div>
-      <div class="firma-box">
-        <div class="ttl">Firma del comprador</div>
-        <div class="who">${esc(v(data.comprador_nombre))} · DNI ${esc(v(data.comprador_dni))}</div>
-        <div class="line"></div>
-        <div class="cap">Firma del titular del contrato</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="foot">
-    GARANTICON es una marca comercial respaldada por Cabrick Automoción S.L. (CIF B01593748, Avda. Somosierra 12, 28703 San Sebastián de los Reyes, Madrid), entidad garante de las obligaciones derivadas de este contrato.<br/>
-    Este documento constituye un contrato vinculante entre las partes indicadas. Conserve una copia para su consulta.
-  </div>
-</div>
-</body></html>`;
-}
-
-/**
- * Genera el contrato como PDF real (descargable) renderizando el HTML
- * en un iframe oculto, capturándolo con html2canvas y exportando con jsPDF.
- */
-export async function generateContractPdf(data: ContractData, filename?: string): Promise<Blob> {
-  const html = buildContractHtml(data);
-
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.left = "-10000px";
-  iframe.style.top = "0";
-  iframe.style.width = "210mm";
-  iframe.style.height = "297mm";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-
-  try {
-    const idoc = iframe.contentDocument!;
-    idoc.open();
-    idoc.write(html);
-    idoc.close();
-
-    // Esperar a que carguen fuentes/imágenes
-    await new Promise<void>((resolve) => {
-      const done = () => resolve();
-      if (idoc.readyState === "complete") {
-        // pequeño delay para fuentes Google
-        setTimeout(done, 600);
-      } else {
-        iframe.addEventListener("load", () => setTimeout(done, 600), { once: true });
-      }
-    });
-    try {
-      // @ts-ignore
-      await (idoc as any).fonts?.ready;
-    } catch {}
-
-    const target = idoc.querySelector(".doc") as HTMLElement;
-    const canvas = await html2canvas(target, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      windowWidth: target.scrollWidth,
-      windowHeight: target.scrollHeight,
-    });
-
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const imgW = pageW;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    const imgData = canvas.toDataURL("image/jpeg", 0.92);
-
-    let heightLeft = imgH;
-    let position = 0;
-    pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
-    heightLeft -= pageH;
-    while (heightLeft > 0) {
-      position = heightLeft - imgH;
-      pdf.addPage();
-      pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
-    }
-
-    const blob = pdf.output("blob");
-
-    if (filename) {
-      await pdf.save(filename, { returnPromise: true });
-    }
-
-    return blob;
-  } finally {
-    document.body.removeChild(iframe);
-  }
+  const bytes = await pdf.save();
+  const arrayBuffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(arrayBuffer).set(bytes);
+  const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+  if (filename) downloadBlob(blob, filename);
+  return blob;
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
