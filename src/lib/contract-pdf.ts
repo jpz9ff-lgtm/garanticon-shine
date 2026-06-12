@@ -1,4 +1,6 @@
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export type ContractData = {
   numero_poliza: string;
@@ -322,26 +324,81 @@ function buildContractHtml(data: ContractData): string {
 }
 
 /**
- * Abre el contrato en una ventana nueva con el diálogo de impresión.
- * El usuario puede "Guardar como PDF" desde el diálogo nativo del navegador.
+ * Genera el contrato como PDF real (descargable) renderizando el HTML
+ * en un iframe oculto, capturándolo con html2canvas y exportando con jsPDF.
  */
 export async function generateContractPdf(data: ContractData): Promise<Blob> {
-  const html = buildContractHtml(data);
-  const win = window.open("", "_blank", "width=900,height=1100");
-  if (!win) {
-    // Popup bloqueado — devolvemos el HTML como Blob descargable de respaldo
-    return new Blob([html], { type: "text/html;charset=utf-8" });
+  // HTML sin el script de auto-print
+  const html = buildContractHtml(data).replace(
+    /<script>[\s\S]*?<\/script>/g,
+    ""
+  );
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.left = "-10000px";
+  iframe.style.top = "0";
+  iframe.style.width = "210mm";
+  iframe.style.height = "297mm";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  try {
+    const idoc = iframe.contentDocument!;
+    idoc.open();
+    idoc.write(html);
+    idoc.close();
+
+    // Esperar a que carguen fuentes/imágenes
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      if (idoc.readyState === "complete") {
+        // pequeño delay para fuentes Google
+        setTimeout(done, 600);
+      } else {
+        iframe.addEventListener("load", () => setTimeout(done, 600), { once: true });
+      }
+    });
+    try {
+      // @ts-ignore
+      await (idoc as any).fonts?.ready;
+    } catch {}
+
+    const target = idoc.querySelector(".doc") as HTMLElement;
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      windowWidth: target.scrollWidth,
+      windowHeight: target.scrollHeight,
+    });
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+    let heightLeft = imgH;
+    let position = 0;
+    pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
+    heightLeft -= pageH;
+    while (heightLeft > 0) {
+      position = heightLeft - imgH;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+    }
+
+    return pdf.output("blob");
+  } finally {
+    document.body.removeChild(iframe);
   }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  // Devolvemos un Blob marcador para mantener la firma de la API
-  return new Blob([], { type: "application/x-print-window" });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
-  // Si es el blob marcador de "ventana de impresión abierta", no hacemos nada.
-  if (blob.type === "application/x-print-window" || blob.size === 0) return;
+  if (!blob || blob.size === 0) return;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
