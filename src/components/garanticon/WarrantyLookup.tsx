@@ -7,7 +7,7 @@ import { Loader2, Car, ArrowRight, Download, FileText } from "lucide-react";
 import { format, differenceInDays, differenceInMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { generateContractPdf, downloadBlob, type ContractData } from "@/lib/contract-pdf";
+import { generateContractPdf, type ContractData } from "@/lib/contract-pdf";
 import { toast } from "@/components/ui/use-toast";
 
 export interface LookupResult {
@@ -93,12 +93,11 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
     if (!warranty) return;
     setDownloading(true);
     try {
-      const blob = await generateContractPdf({
+      await generateContractPdf({
         ...warranty,
         vendedor_empresa: dealer?.nombre_empresa,
         vendedor_cif: dealer?.cif,
-      });
-      downloadBlob(blob, `Garanticon_${warranty.numero_poliza}.pdf`);
+      }, `Garanticon_${warranty.numero_poliza}.pdf`);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: err?.message ?? "No se pudo generar el PDF" });
     } finally {

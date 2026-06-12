@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
-import { generateContractPdf, downloadBlob } from "@/lib/contract-pdf";
+import { generateContractPdf } from "@/lib/contract-pdf";
 import { modalidadBadge } from "@/lib/modalidad-ui";
 import type { Modalidad } from "@/lib/garanticon-validators";
 
@@ -49,13 +49,12 @@ const WarrantyDetail = () => {
     if (!w) return;
     setDownloading(true);
     try {
-      const blob = await generateContractPdf({
+      await generateContractPdf({
         ...w,
         limite_averia: Number(w.limite_averia),
         vendedor_empresa: dealer?.nombre_empresa,
         vendedor_cif: dealer?.cif,
-      });
-      downloadBlob(blob, `Garanticon_${w.numero_poliza}.pdf`);
+      }, `Garanticon_${w.numero_poliza}.pdf`);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e?.message ?? "No se pudo generar el PDF" });
     } finally {
