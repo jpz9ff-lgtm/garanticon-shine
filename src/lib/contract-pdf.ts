@@ -383,7 +383,7 @@ function drawCoverageSection(ctx: PdfContext, title: string, coverage: string, c
   ctx.y += sectionHeight + BLOCK_GAP;
 }
 
-function getConditions(data: ContractData, coverage: string, contractLimit: string): ConditionItem[] {
+function getConditions(coverage: string, contractLimit: string): ConditionItem[] {
   return [
     {
       title: "1. Definición de avería",
@@ -767,12 +767,14 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     soft: hex(tier.accentLight),
   });
 
-  drawConditionsSection(ctx, getConditions(data, coverage, contractLimit).slice(0, 10));
+  drawConditionsSection(ctx, getConditions(coverage, contractLimit).slice(0, 10));
   drawSignatures(ctx, data, coverage, contractLimit);
   drawFooter(ctx);
 
   const bytes = await pdf.save();
-  const blob = new Blob([bytes], { type: "application/pdf" });
+  const arrayBuffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(arrayBuffer).set(bytes);
+  const blob = new Blob([arrayBuffer], { type: "application/pdf" });
   if (filename) downloadBlob(blob, filename);
   return blob;
 }
