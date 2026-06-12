@@ -385,7 +385,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     const blob = pdf.output("blob");
 
     if (filename) {
-      pdf.save(filename, { returnPromise: true });
+      await pdf.save(filename, { returnPromise: true });
     }
 
     return blob;
