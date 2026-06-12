@@ -153,9 +153,8 @@ function buildContractHtml(data: ContractData): string {
 
   <div class="block hdr">
     <div class="brand">
-      <div class="shield">G</div>
+      <img src="https://lovable.dev/__l5e/assets-v1/8d7e802b-b694-474f-93da-85a98526dfe6/garanticon-logo.png" alt="garanticon" style="height:42px;width:auto;display:block;" crossorigin="anonymous" />
       <div>
-        <div class="name">garanticon</div>
         <div class="sub">Contrato de Garantía Mecánica</div>
       </div>
     </div>
