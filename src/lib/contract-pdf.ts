@@ -1,4 +1,3 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { format } from "date-fns";
 
 export type ContractData = {
@@ -27,8 +26,12 @@ export type ContractData = {
   traccion_4x4: boolean;
   vendedor_empresa?: string | null;
   vendedor_cif?: string | null;
+  vendedor_direccion?: string | null;
+  vendedor_telefono?: string | null;
+  vendedor_email?: string | null;
   limite_averia?: number | null;
   aceptacion_fecha?: string | null; // ISO datetime de la firma
+  defectos_preexistentes?: string | null;
 };
 
 const fmtDate = (d?: string | null) => {
