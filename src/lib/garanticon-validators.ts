@@ -2,10 +2,14 @@ import { z } from "zod";
 
 const dniRegex = /^[0-9]{8}[A-Za-z]$/;
 const nieRegex = /^[XYZxyz][0-9]{7}[A-Za-z]$/;
+const cifRegex = /^[ABCDEFGHJNPQRSUVWabcdefghjnpqrsuvw][0-9]{7}[0-9A-Ja-j]$/;
 const matriculaRegex = /^[0-9]{4}[A-Za-z]{3}$/; // formato moderno español
 const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/; // VIN estándar: 17 caracteres, sin I, O, Q
 
-export const isValidDni = (v: string) => dniRegex.test(v.trim()) || nieRegex.test(v.trim());
+export const isValidDni = (v: string) => {
+  const s = v.trim();
+  return dniRegex.test(s) || nieRegex.test(s) || cifRegex.test(s);
+};
 export const isValidMatricula = (v: string) => matriculaRegex.test(v.trim().replace(/\s|-/g, ""));
 export const isValidVin = (v: string) => vinRegex.test(v.trim().toUpperCase());
 
