@@ -695,7 +695,9 @@ export async function generateContractPdf(data: ContractData, filename?: string)
   const contractLimit = fmtEUR(data.precio_venta);
   const fechaContrato = data.aceptacion_fecha
     ? format(new Date(data.aceptacion_fecha), "dd/MM/yyyy HH:mm")
-    : format(new Date(), "dd/MM/yyyy HH:mm");
+    : data.fecha_venta
+      ? format(new Date(data.fecha_venta), "dd/MM/yyyy")
+      : format(new Date(), "dd/MM/yyyy");
   const direccionComprador = [
     data.comprador_direccion,
     [data.comprador_cp, data.comprador_poblacion].filter(Boolean).join(" "),
