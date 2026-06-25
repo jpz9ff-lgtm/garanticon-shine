@@ -51,17 +51,20 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
   const resultInView = useInView(resultRef, { once: true, margin: "-50px" });
 
   useEffect(() => {
-    if (warranty && resultInView) {
-      const total = Math.max(
-        1,
-        differenceInDays(new Date(warranty.fecha_fin), new Date(warranty.fecha_inicio)),
-      );
-      const used = Math.max(0, differenceInDays(new Date(), new Date(warranty.fecha_inicio)));
-      const pct = Math.min(100, Math.round((used / total) * 100));
-      const t = setTimeout(() => setProgress(pct), 200);
-      return () => clearTimeout(t);
+    if (!warranty) {
+      setProgress(0);
+      return;
     }
-  }, [warranty, resultInView]);
+    const total = Math.max(
+      1,
+      differenceInDays(new Date(warranty.fecha_fin), new Date(warranty.fecha_inicio)),
+    );
+    const used = Math.max(0, differenceInDays(new Date(), new Date(warranty.fecha_inicio)));
+    const pct = Math.max(0, Math.min(100, Math.round((used / total) * 100)));
+    setProgress(0);
+    const t = setTimeout(() => setProgress(pct), 300);
+    return () => clearTimeout(t);
+  }, [warranty]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
