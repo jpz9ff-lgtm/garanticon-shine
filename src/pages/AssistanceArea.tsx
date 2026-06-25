@@ -30,7 +30,7 @@ const AssistanceArea = () => {
             </h2>
             <p className="mt-4 text-base text-muted-foreground">
               Rellena el formulario y nuestro equipo se pondrá en contacto contigo. Si es urgente,
-              llámanos directamente al <a href="tel:+34900123456" className="font-semibold text-primary hover:underline">900 123 456</a>.
+              llámanos directamente al <a href="tel:+34919930903" className="font-semibold text-primary hover:underline">919 930 903</a>.
             </p>
           </div>
           <AssistanceForm embedded />

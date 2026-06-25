@@ -59,7 +59,7 @@ export const template = {
   displayName: 'Aviso interno de asistencia',
   previewData: {
     nombre: 'Juan Pérez',
-    telefono: '600123456',
+    telefono: '919930903',
     email: 'cliente@example.com',
     matricula: '1234ABC',
     numero_poliza: 'GC-202605-0001',
