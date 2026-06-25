@@ -324,7 +324,7 @@ const NewWarranty = () => {
                 {errMsg("comprador_nombre")}
               </div>
               <div className="space-y-1.5">
-                <Label>DNI / NIF *</Label>
+                <Label>DNI / NIE / CIF *</Label>
                 <Input value={data.comprador_dni} onChange={(e) => update("comprador_dni", e.target.value.toUpperCase())} />
                 {errMsg("comprador_dni")}
               </div>
