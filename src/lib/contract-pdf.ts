@@ -621,6 +621,7 @@ function drawSignatures(ctx: PdfContext, data: ContractData, coverage: string, c
 function drawFooter(ctx: PdfContext) {
   const footerLines = [
     "GARANTICON es una marca comercial respaldada por Cabrick Automoción S.L. (CIF B01593748, Avda. Somosierra 12, 28703 San Sebastián de los Reyes, Madrid), entidad garante de las obligaciones derivadas de este contrato.",
+    "Contacto: info@garanticon.es · Tel. +34 919 930 903 · www.garanticon.es",
     "Este documento constituye un contrato vinculante entre las partes indicadas. Conserve una copia para su consulta.",
   ];
   const footerHeight = footerLines.reduce((sum, line) => sum + textBlockHeight(line, ctx.fonts.regular, 7.4, CONTENT_WIDTH, 9), 0) + 10;
