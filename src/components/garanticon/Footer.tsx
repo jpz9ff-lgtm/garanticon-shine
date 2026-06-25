@@ -15,7 +15,7 @@ export const Footer = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-background/60">Teléfono</p>
-              <p className="mt-1 font-semibold">+34 900 123 456</p>
+              <p className="mt-1 font-semibold">+34 919 930 903</p>
             </div>
           </div>
           <div className="flex items-start gap-3">

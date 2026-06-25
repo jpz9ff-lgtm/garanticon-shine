@@ -3,9 +3,9 @@ import { Mail, MessageCircle, Phone } from "lucide-react";
 const contactItems = [
   {
     label: "Teléfono",
-    value: "+34 900 123 456",
+    value: "+34 919 930 903",
     sub: "Atención al cliente",
-    href: "tel:+34900123456",
+    href: "tel:+34919930903",
     icon: Phone,
   },
   {
@@ -17,9 +17,9 @@ const contactItems = [
   },
   {
     label: "WhatsApp",
-    value: "+34 900 123 456",
+    value: "+34 919 930 903",
     sub: "Más rápido y directo",
-    href: "https://api.whatsapp.com/send?phone=34900123456&text=Hola%2C%20necesito%20asistencia%20con%20mi%20p%C3%B3liza%20Garanticon",
+    href: "https://api.whatsapp.com/send?phone=34919930903&text=Hola%2C%20necesito%20asistencia%20con%20mi%20p%C3%B3liza%20Garanticon",
     icon: MessageCircle,
     accent: true,
   },
