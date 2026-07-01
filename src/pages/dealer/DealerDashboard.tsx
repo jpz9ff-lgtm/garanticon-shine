@@ -25,6 +25,8 @@ type Warranty = {
   numero_poliza: string;
   comprador_nombre: string;
   matricula: string;
+  vehiculo_marca: string | null;
+  vehiculo_modelo: string | null;
   modalidad: Modalidad;
   fecha_inicio: string;
   fecha_fin: string;
@@ -50,7 +52,7 @@ const DealerDashboard = () => {
     setLoading(true);
     supabase
       .from("warranties")
-      .select("id, numero_poliza, comprador_nombre, matricula, modalidad, fecha_inicio, fecha_fin, estado, created_at")
+      .select("id, numero_poliza, comprador_nombre, matricula, vehiculo_marca, vehiculo_modelo, modalidad, fecha_inicio, fecha_fin, estado, created_at")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setWarranties((data ?? []) as Warranty[]);
@@ -191,6 +193,7 @@ const DealerDashboard = () => {
                       <TableHead>Nº Póliza</TableHead>
                       <TableHead>Comprador</TableHead>
                       <TableHead>Matrícula</TableHead>
+                      <TableHead>Vehículo</TableHead>
                       <TableHead>Modalidad</TableHead>
                       <TableHead>Vigencia</TableHead>
                       <TableHead>Estado</TableHead>
@@ -203,6 +206,9 @@ const DealerDashboard = () => {
                         <TableCell className="font-mono text-xs">{w.numero_poliza}</TableCell>
                         <TableCell className="font-medium">{w.comprador_nombre}</TableCell>
                         <TableCell className="font-mono uppercase">{w.matricula}</TableCell>
+                        <TableCell className="text-sm">
+                          {[w.vehiculo_marca, w.vehiculo_modelo].filter(Boolean).join(" ") || "—"}
+                        </TableCell>
                         <TableCell>{modalidadBadge(w.modalidad)}</TableCell>
                         <TableCell className="whitespace-nowrap text-sm">
                           {fmt(w.fecha_inicio)} → {fmt(w.fecha_fin)}
