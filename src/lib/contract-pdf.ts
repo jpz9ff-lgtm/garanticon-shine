@@ -36,10 +36,6 @@ export type ContractData = {
   aceptacion_fecha?: string | null;
   defectos_preexistentes?: string | null;
   es_electrico?: boolean | null;
-  autonomia_wltp?: number | null;
-  capacidad_kwh?: number | null;
-  tipo_conector?: string | null;
-  soh_declarado?: number | null;
 };
 
 const TIER: Record<string, { nombre: string; cobertura: number; accent: string; accentDark: string; accentLight: string }> = {
@@ -91,6 +87,7 @@ type ConditionItem = {
   title: string;
   paragraphs?: string[];
   bullets?: string[];
+  closing?: string[];
   highlight?: boolean;
 };
 
@@ -468,7 +465,7 @@ const EV_CONDITIONS_BASE: ConditionItem[] = [
     title: "1. Definiciones",
     paragraphs: [
       "Se entiende por avería la incapacidad repentina e inesperada de una pieza cubierta para funcionar conforme a especificación del fabricante, como resultado de un fallo mecánico, eléctrico o electrónico. La reducción gradual de rendimiento por antigüedad, desgaste o kilometraje no se considera avería.",
-      "Degradación de la batería: disminución natural y progresiva de la capacidad de almacenamiento del pack de alta tensión. Se considera desgaste normal y queda excluida en todo caso, con independencia del porcentaje de pérdida. Estado de salud (SoH): porcentaje de capacidad útil de la batería respecto a su capacidad nominal de origen, medido por diagnosis oficial. No constituyen avería cubierta la degradación o pérdida gradual de capacidad de la batería ni la consiguiente reducción de autonomía.",
+      "Degradación de la batería: disminución natural y progresiva de la capacidad de almacenamiento del pack de alta tensión. Se considera desgaste normal y queda excluida en todo caso, con independencia del porcentaje de pérdida. Estado de salud (SoH): porcentaje de capacidad útil de la batería respecto a su capacidad nominal de origen. No constituyen avería cubierta la degradación o pérdida gradual de capacidad de la batería ni la consiguiente reducción de autonomía.",
     ],
   },
   {
@@ -497,6 +494,9 @@ const EV_CONDITIONS_BASE: ConditionItem[] = [
       "Cableado de alta tensión y conectores de potencia: ante fallo súbito, no por daño externo.",
       "Dirección asistida eléctrica; compresor eléctrico de climatización; servofreno o bomba de vacío eléctrica.",
       "Puerto de carga (conjunto del conector): ante fallo eléctrico súbito, no por desgaste, golpe o mal uso.",
+    ],
+    closing: [
+      "El pack de batería de alta tensión (celdas y módulos) se rige exclusivamente por la Cláusula Especial de Batería. Las piezas de reemplazo podrán ser nuevas, reconstruidas o recicladas, funcionalmente aptas, a criterio de GARANTICON.",
     ],
   },
   {
@@ -565,6 +565,10 @@ function measureConditionItem(item: ConditionItem, fonts: Fonts, width: number) 
     height += textBlockHeight(bullet, fonts.regular, 8.3, width - 28, 10.4) + 3;
   }
 
+  for (const paragraph of item.closing ?? []) {
+    height += textBlockHeight(paragraph, fonts.regular, 8.5, width - 16, 10.7) + 4;
+  }
+
   return height + 8;
 }
 
@@ -587,6 +591,11 @@ function drawConditionItem(page: PDFPage, item: ConditionItem, x: number, top: n
     drawText(page, "–", x + 8, cursor, fonts.bold, 8.5, COLORS.dark);
     cursor += drawTextBlock(page, bullet, x + 18, cursor, width - 28, fonts.regular, 8.3, COLORS.dark, 10.4);
     cursor += 3;
+  }
+
+  for (const paragraph of item.closing ?? []) {
+    cursor += drawTextBlock(page, paragraph, x + 8, cursor, width - 16, fonts.regular, 8.5, COLORS.dark, 10.7);
+    cursor += 4;
   }
 
   return height;
@@ -844,14 +853,6 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     { label: "Fecha de matriculación", value: fmtDate(data.fecha_matriculacion) },
     { label: "Kilometraje", value: data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")} km` : "—" },
     { label: "Valor de tasación", value: fmtEUR(data.precio_venta) },
-    ...(isEv
-      ? [
-          { label: "Autonomía WLTP", value: data.autonomia_wltp != null ? `${Number(data.autonomia_wltp).toLocaleString("es-ES")} km` : "—" },
-          { label: "Capacidad batería", value: data.capacidad_kwh != null ? `${Number(data.capacidad_kwh).toLocaleString("es-ES")} kWh` : "—" },
-          { label: "Conector", value: v(data.tipo_conector) },
-          { label: "Estado de salud (SoH)", value: data.soh_declarado != null ? `${Number(data.soh_declarado).toLocaleString("es-ES")} %` : "—" },
-        ]
-      : []),
   ], 3);
 
   drawFieldSection(ctx, "Vigencia del contrato", [

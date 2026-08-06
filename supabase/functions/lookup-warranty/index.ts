@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
           "comprador_cp,comprador_poblacion,comprador_provincia," +
           "vehiculo_marca,vehiculo_modelo,matricula,bastidor,fecha_matriculacion,km_venta," +
           "precio_venta,combustible,tipo_cambio,traccion_4x4,dealer_id," +
-          "es_electrico,autonomia_wltp,capacidad_kwh,tipo_conector,soh_declarado",
+          "es_electrico",
       )
       .eq("matricula", matricula)
       .eq("numero_poliza", numero_poliza)
