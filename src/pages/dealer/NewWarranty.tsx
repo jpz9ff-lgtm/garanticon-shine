@@ -457,6 +457,48 @@ const NewWarranty = () => {
                   ))}
                 </RadioGroup>
               </div>
+              {data.combustible === "Eléctrico" && (
+                <div className="md:col-span-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
+                  ⚡ Vehículo 100% eléctrico detectado. Se emitirá el contrato específico para vehículos eléctricos.
+                </div>
+              )}
+              <div className="md:col-span-2 flex items-start gap-2">
+                <Checkbox
+                  id="bev"
+                  checked={data.es_electrico}
+                  onCheckedChange={(v) => update("es_electrico", Boolean(v))}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="bev" className="cursor-pointer font-normal">
+                  Vehículo 100% eléctrico (BEV) — genera el contrato específico para eléctricos
+                </Label>
+              </div>
+              {data.es_electrico && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label>Autonomía homologada WLTP (km)</Label>
+                    <Input type="number" min="0" value={data.autonomia_wltp} onChange={(e) => update("autonomia_wltp", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Capacidad de batería (kWh)</Label>
+                    <Input type="number" min="0" step="0.1" value={data.capacidad_kwh} onChange={(e) => update("capacidad_kwh", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipo de conector</Label>
+                    <RadioGroup value={data.tipo_conector} onValueChange={(v) => update("tipo_conector", v)} className="flex flex-wrap gap-3">
+                      {(["Type 2", "CCS2", "CHAdeMO", "Otro"] as const).map((c) => (
+                        <label key={c} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                          <RadioGroupItem value={c} /> {c}
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Estado de salud batería (SoH %)</Label>
+                    <Input type="number" min="0" max="100" step="0.1" value={data.soh_declarado} onChange={(e) => update("soh_declarado", e.target.value)} />
+                  </div>
+                </>
+              )}
               <div className="md:col-span-2 flex items-center gap-2">
                 <Checkbox id="4x4" checked={data.traccion_4x4} onCheckedChange={(v) => update("traccion_4x4", Boolean(v))} />
                 <Label htmlFor="4x4" className="cursor-pointer">Tracción 4x4</Label>
