@@ -565,6 +565,10 @@ function measureConditionItem(item: ConditionItem, fonts: Fonts, width: number) 
     height += textBlockHeight(bullet, fonts.regular, 8.3, width - 28, 10.4) + 3;
   }
 
+  for (const paragraph of item.closing ?? []) {
+    height += textBlockHeight(paragraph, fonts.regular, 8.5, width - 16, 10.7) + 4;
+  }
+
   return height + 8;
 }
 
@@ -587,6 +591,11 @@ function drawConditionItem(page: PDFPage, item: ConditionItem, x: number, top: n
     drawText(page, "–", x + 8, cursor, fonts.bold, 8.5, COLORS.dark);
     cursor += drawTextBlock(page, bullet, x + 18, cursor, width - 28, fonts.regular, 8.3, COLORS.dark, 10.4);
     cursor += 3;
+  }
+
+  for (const paragraph of item.closing ?? []) {
+    cursor += drawTextBlock(page, paragraph, x + 8, cursor, width - 16, fonts.regular, 8.5, COLORS.dark, 10.7);
+    cursor += 4;
   }
 
   return height;
