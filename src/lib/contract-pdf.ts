@@ -864,7 +864,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     v(data.defectos_preexistentes) === "—" ? "NINGUNO" : normalizeText(data.defectos_preexistentes),
     isEv ? EV_DECLARATION_NOTE : undefined,
   );
-  drawCoverageSection(ctx, isEv ? `GARANTICON ${tier.nombre} · ELÉCTRICO` : `GARANTICON ${tier.nombre}`, coverage, contractLimit, {
+  drawCoverageSection(ctx, `GARANTICON ${tier.nombre}`, coverage, contractLimit, {
     base: hex(tier.accent),
     border: hex(tier.accentDark),
     soft: hex(tier.accentLight),
