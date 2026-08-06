@@ -35,6 +35,11 @@ export type ContractData = {
   limite_averia?: number | null;
   aceptacion_fecha?: string | null;
   defectos_preexistentes?: string | null;
+  es_electrico?: boolean | null;
+  autonomia_wltp?: number | null;
+  capacidad_kwh?: number | null;
+  tipo_conector?: string | null;
+  soh_declarado?: number | null;
 };
 
 const TIER: Record<string, { nombre: string; cobertura: number; accent: string; accentDark: string; accentLight: string }> = {
@@ -66,6 +71,8 @@ const COLORS = {
   greyBorder: hex("#E5E7EB"),
   blue: hex("#1E40AF"),
   blueLight: hex("#EFF6FF"),
+  green: hex("#00B894"),
+  greenLight: hex("#ECFDF7"),
   white: rgb(1, 1, 1),
 };
 
@@ -84,6 +91,7 @@ type ConditionItem = {
   title: string;
   paragraphs?: string[];
   bullets?: string[];
+  highlight?: boolean;
 };
 
 type PdfContext = {
