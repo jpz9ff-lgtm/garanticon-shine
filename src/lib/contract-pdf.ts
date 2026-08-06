@@ -575,7 +575,7 @@ function drawConditionItem(page: PDFPage, item: ConditionItem, x: number, top: n
     : { color: COLORS.greyLight });
 
   let cursor = top + 8;
-  drawText(page, item.title.toUpperCase(), x + 8, cursor, fonts.black, 9, item.highlight ? COLORS.green : COLORS.dark);
+  drawText(page, item.highlight ? item.title.toUpperCase() : item.title, x + 8, cursor, fonts.black, 9, item.highlight ? COLORS.green : COLORS.dark);
   cursor += 14;
 
   for (const paragraph of item.paragraphs ?? []) {
