@@ -35,6 +35,11 @@ export type ContractData = {
   limite_averia?: number | null;
   aceptacion_fecha?: string | null;
   defectos_preexistentes?: string | null;
+  es_electrico?: boolean | null;
+  autonomia_wltp?: number | null;
+  capacidad_kwh?: number | null;
+  tipo_conector?: string | null;
+  soh_declarado?: number | null;
 };
 
 const TIER: Record<string, { nombre: string; cobertura: number; accent: string; accentDark: string; accentLight: string }> = {
@@ -66,6 +71,8 @@ const COLORS = {
   greyBorder: hex("#E5E7EB"),
   blue: hex("#1E40AF"),
   blueLight: hex("#EFF6FF"),
+  green: hex("#00B894"),
+  greenLight: hex("#ECFDF7"),
   white: rgb(1, 1, 1),
 };
 
@@ -84,6 +91,7 @@ type ConditionItem = {
   title: string;
   paragraphs?: string[];
   bullets?: string[];
+  highlight?: boolean;
 };
 
 type PdfContext = {
@@ -305,12 +313,15 @@ function drawFieldSection(ctx: PdfContext, title: string, fields: Field[], colum
   ctx.y += sectionHeight + BLOCK_GAP;
 }
 
-function drawDeclarationSection(ctx: PdfContext, defectos: string) {
+function drawDeclarationSection(ctx: PdfContext, defectos: string, evNote?: string) {
   const titleHeight = 14;
   const intro = "El comprador declara que el vehículo ha sido revisado y entregado sin averías conocidas en el momento de la firma, salvo las indicadas a continuación:";
   const introHeight = textBlockHeight(intro, ctx.fonts.regular, 9, CONTENT_WIDTH - SECTION_PADDING_X * 2, 11.5);
   const defectHeight = textBlockHeight(defectos, ctx.fonts.bold, 10, CONTENT_WIDTH - SECTION_PADDING_X * 2, 12);
-  const sectionHeight = SECTION_PADDING_Y + titleHeight + 8 + introHeight + 8 + 9 + 4 + defectHeight + SECTION_PADDING_Y;
+  const evHeight = evNote
+    ? textBlockHeight(evNote, ctx.fonts.regular, 8.5, CONTENT_WIDTH - SECTION_PADDING_X * 2, 10.7) + 8
+    : 0;
+  const sectionHeight = SECTION_PADDING_Y + titleHeight + 8 + introHeight + 8 + 9 + 4 + defectHeight + evHeight + SECTION_PADDING_Y;
 
   ensureSpace(ctx, sectionHeight + BLOCK_GAP);
   drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, sectionHeight, { color: COLORS.greyLight });
@@ -318,7 +329,10 @@ function drawDeclarationSection(ctx: PdfContext, defectos: string) {
   const start = ctx.y + SECTION_PADDING_Y + 20;
   const used = drawTextBlock(ctx.page, intro, PAGE_PADDING_X + SECTION_PADDING_X, start, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.regular, 9, COLORS.dark, 11.5);
   drawText(ctx.page, "DEFECTOS PREEXISTENTES DECLARADOS", PAGE_PADDING_X + SECTION_PADDING_X, start + used + 8, ctx.fonts.bold, 7.2, COLORS.grey);
-  drawTextBlock(ctx.page, defectos, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.bold, 10, COLORS.dark, 12);
+  const defectUsed = drawTextBlock(ctx.page, defectos, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.bold, 10, COLORS.dark, 12);
+  if (evNote) {
+    drawTextBlock(ctx.page, evNote, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20 + defectUsed + 8, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.regular, 8.5, COLORS.dark, 10.7);
+  }
   ctx.y += sectionHeight + BLOCK_GAP;
 }
 
@@ -449,6 +463,97 @@ function getConditions(coverage: string, contractLimit: string): ConditionItem[]
   ];
 }
 
+const EV_CONDITIONS_BASE: ConditionItem[] = [
+  {
+    title: "1. Definiciones",
+    paragraphs: [
+      "Se entiende por avería la incapacidad repentina e inesperada de una pieza cubierta para funcionar conforme a especificación del fabricante, como resultado de un fallo mecánico, eléctrico o electrónico. La reducción gradual de rendimiento por antigüedad, desgaste o kilometraje no se considera avería.",
+      "Degradación de la batería: disminución natural y progresiva de la capacidad de almacenamiento del pack de alta tensión. Se considera desgaste normal y queda excluida en todo caso, con independencia del porcentaje de pérdida. Estado de salud (SoH): porcentaje de capacidad útil de la batería respecto a su capacidad nominal de origen, medido por diagnosis oficial. No constituyen avería cubierta la degradación o pérdida gradual de capacidad de la batería ni la consiguiente reducción de autonomía.",
+    ],
+  },
+  {
+    title: "2. Tramitación y autorización",
+    paragraphs: [
+      "El titular debe comunicar la avería a Garanticon en un plazo máximo de 3 días desde su detección, y obtener autorización previa antes de iniciar cualquier reparación. Las reparaciones realizadas sin autorización previa no serán objeto de cobertura.",
+      "Toda diagnosis o intervención sobre el sistema de alta tensión deberá realizarse en taller autorizado y con técnicos habilitados para trabajos en alta tensión conforme a la normativa vigente; la manipulación del sistema de alta tensión por personal no habilitado anula la cobertura. GARANTICON podrá requerir diagnosis oficial del estado de la batería y del sistema de alta tensión. Los gastos de diagnóstico, diagnosis del SoH y desmontaje correrán a cargo del propietario con independencia del resultado.",
+    ],
+  },
+  {
+    title: "3. Mantenimiento obligatorio",
+    paragraphs: [
+      "Condición esencial de vigencia: cumplimiento del plan de mantenimiento del fabricante para vehículo eléctrico, con la periodicidad que este establezca. Incluye, cuando el fabricante lo prevea: revisión y, en su caso, sustitución del líquido refrigerante de los circuitos de refrigeración de la batería y de la electrónica de potencia; revisión del sistema de alta tensión y de sus conexiones; diagnosis del estado de salud (SoH) de la batería; sustitución del filtro de habitáculo y del líquido de frenos; y comprobación del sistema de frenado regenerativo. Acreditación mediante factura original de taller. El incumplimiento o la imposibilidad de acreditar el mantenimiento —en particular el del circuito de refrigeración de la batería— supone la anulación total de la garantía y la pérdida del derecho a indemnización por siniestros posteriores a la revisión incumplida.",
+    ],
+  },
+  {
+    title: "4. Piezas cubiertas",
+    paragraphs: ["Solo las piezas listadas. Todo lo no mencionado queda excluido."],
+    bullets: [
+      "Motor eléctrico de tracción: estator, rotor, rodamientos del motor.",
+      "Electrónica de potencia: inversor/ondulador de tracción, convertidor DC-DC, variador de potencia.",
+      "Cargador de a bordo (OBC) y su electrónica de control de carga interna.",
+      "Transmisión/reductora de relación fija: engranajes, ejes, rodamientos y diferencial integrado.",
+      "Sistema de gestión de la batería (BMS): unidad de control electrónica, ante fallo súbito de la unidad (no de las celdas ni de la capacidad).",
+      "Sistema de refrigeración/climatización de la batería y de la electrónica de potencia: bomba de refrigerante, válvulas, sensores, resistencias/calentador e intercambiador. Excluida la recarga de gas y el rellenado de fluidos.",
+      "Cableado de alta tensión y conectores de potencia: ante fallo súbito, no por daño externo.",
+      "Dirección asistida eléctrica; compresor eléctrico de climatización; servofreno o bomba de vacío eléctrica.",
+      "Puerto de carga (conjunto del conector): ante fallo eléctrico súbito, no por desgaste, golpe o mal uso.",
+    ],
+  },
+  {
+    title: "Cláusula especial — Batería de alta tensión",
+    highlight: true,
+    paragraphs: [
+      "El pack de batería de alta tensión (celdas y módulos de tracción), su capacidad de almacenamiento y la autonomía del vehículo quedan EXPRESAMENTE EXCLUIDOS de la cobertura de esta garantía comercial. Esta garantía no cubre en ningún caso la degradación, la pérdida de capacidad, la reducción de autonomía ni el reemplazo del pack de batería. El COMPRADOR reconoce que el pack de batería puede estar amparado, en su caso, por la garantía del fabricante del vehículo, a la que deberá dirigirse directamente para cualquier incidencia relativa al mismo. GARANTICON cubre exclusivamente los componentes eléctricos, electrónicos y mecánicos listados en la cláusula 4, distintos del pack de batería.",
+    ],
+  },
+  {
+    title: "5. Exclusiones",
+    paragraphs: [
+      "Excluidos sin excepción: (a) la degradación o pérdida gradual de capacidad de la batería y la reducción de autonomía, cualquiera que sea su porcentaje; (b) el desgaste normal y los consumibles (batería auxiliar de 12V, neumáticos, pastillas y discos de freno, escobillas, filtros, fluidos, cable de carga y accesorios de recarga); (c) averías causadas por falta de mantenimiento acreditada o por circular con indicadores de avería activos; (d) daños al pack de batería o a cualquier componente por golpe, accidente, colisión, vandalismo, inmersión, incendio externo o fenómeno meteorológico; (e) averías preexistentes o en desarrollo en el momento de la venta; (f) daños en piezas cubiertas causados por fallo de piezas no cubiertas; (g) daños consecuenciales; (h) averías derivadas del uso de cargadores, wallbox, cables o equipos de recarga no homologados o no certificados por el fabricante; (i) daños atribuibles a carga rápida en corriente continua (DC) reiterada o fuera de las especificaciones del fabricante, o a mantener el vehículo inmovilizado con la batería a nivel de carga crítico durante periodos prolongados; (j) actualizaciones, reprogramaciones o manipulaciones de software no oficiales, incluida la alteración de parámetros del BMS o de la gestión de carga; (k) modificaciones no homologadas; (l) uso profesional, competición o no particular; (m) manipulación del cuentakilómetros; (n) reparaciones no autorizadas o realizadas por talleres no autorizados previamente; (o) averías comunicadas fuera de plazo; (p) averías cubiertas por la garantía del fabricante u otro seguro.",
+      "El propietario que reclame cobertura deberá aportar la documentación que acredite que la avería es de carácter súbito y no incurre en ninguna de las exclusiones anteriores.",
+    ],
+  },
+  {
+    title: "6. Carencia",
+    paragraphs: [
+      "Esta garantía entra en vigor 15 días o 1.000 km después de la fecha de contratación, lo que ocurra primero. Las averías producidas durante este periodo no están cubiertas. A efectos de determinar si una avería está dentro del periodo de cobertura, se tomará como referencia la fecha en que se produce la avería, y no la de su comunicación, siempre que esta se realice dentro del plazo establecido.",
+    ],
+  },
+  {
+    title: "7. Averías independientes",
+    paragraphs: [
+      "Se consideran averías independientes aquellas que, a juicio técnico, tienen causas distintas y sin relación directa entre sí. Cada avería independiente dispone de su propio límite de cobertura según el resumen de cobertura anterior.",
+    ],
+  },
+  {
+    title: "8. Ámbito territorial y transmisión",
+    paragraphs: [
+      "La cobertura es válida en territorio español. Para asistencia fuera de España, el titular debe contactar previamente con Garanticon para confirmar la cobertura aplicable. Esta garantía es personal e intransferible, salvo autorización expresa y por escrito de Garanticon en caso de venta del vehículo a un tercero durante la vigencia del contrato.",
+    ],
+  },
+  {
+    title: "9. Obligaciones del propietario",
+    paragraphs: [
+      "(a) No circular con avería que pueda agravar el daño. (b) Conservar piezas sustituidas 30 días. (c) Facilitar acceso al vehículo para inspección y diagnosis. (d) Aportar la documentación de mantenimiento requerida. (e) No iniciar reparación sin autorización previa. (f) Utilizar exclusivamente equipos de recarga homologados y compatibles con el vehículo. (g) No manipular ni permitir la manipulación del software del vehículo, del BMS ni de la gestión de carga. (h) Respetar las recomendaciones de carga del fabricante y mantener un nivel de carga adecuado durante inmovilizaciones prolongadas. El incumplimiento de cualquiera de estas obligaciones faculta a GARANTICON para rechazar la cobertura del siniestro.",
+    ],
+  },
+  {
+    title: "10. Resolución",
+    paragraphs: [
+      "La garantía se resuelve por: pérdida total del vehículo; transmisión sin autorización (cláusula 8); manipulación del cuentakilómetros; manipulación del software del vehículo, del BMS o de la gestión de carga; uso de equipos de recarga no homologados; datos falsos en el certificado; uso no particular; o decisión de GARANTICON ante irregularidades en la tramitación de siniestros.",
+    ],
+  },
+  {
+    title: "11. Jurisdicción",
+    paragraphs: [
+      "Para cualquier controversia derivada de este contrato, las partes se someten a los Juzgados y Tribunales de San Sebastián de los Reyes (Madrid), sin perjuicio de los derechos que la normativa de consumo reconozca al consumidor.",
+    ],
+  },
+];
+
+export const EV_DECLARATION_NOTE =
+  "El COMPRADOR reconoce expresamente que ha sido informado de que la degradación y la pérdida de capacidad de la batería de alta tensión NO están cubiertas por esta garantía, y de que el pack de batería se rige por la Cláusula Especial de Batería de las condiciones generales.";
+
 function measureConditionItem(item: ConditionItem, fonts: Fonts, width: number) {
   let height = 8 + 12;
 
@@ -465,10 +570,12 @@ function measureConditionItem(item: ConditionItem, fonts: Fonts, width: number) 
 
 function drawConditionItem(page: PDFPage, item: ConditionItem, x: number, top: number, width: number, fonts: Fonts) {
   const height = measureConditionItem(item, fonts, width);
-  drawRect(page, x, top, width, height, { color: COLORS.greyLight });
+  drawRect(page, x, top, width, height, item.highlight
+    ? { color: COLORS.greenLight, borderColor: COLORS.green, borderWidth: 1.2 }
+    : { color: COLORS.greyLight });
 
   let cursor = top + 8;
-  drawText(page, item.title, x + 8, cursor, fonts.black, 9, COLORS.dark);
+  drawText(page, item.highlight ? item.title.toUpperCase() : item.title, x + 8, cursor, fonts.black, 9, item.highlight ? COLORS.green : COLORS.dark);
   cursor += 14;
 
   for (const paragraph of item.paragraphs ?? []) {
@@ -485,8 +592,8 @@ function drawConditionItem(page: PDFPage, item: ConditionItem, x: number, top: n
   return height;
 }
 
-function drawConditionsHeading(ctx: PdfContext, continued = false) {
-  const title = continued ? "Condiciones de la garantía (continuación)" : "Condiciones de la garantía";
+function drawConditionsHeading(ctx: PdfContext, continued = false, baseTitle = "Condiciones de la garantía") {
+  const title = continued ? `${baseTitle} (continuación)` : baseTitle;
   const headingHeight = 22;
   ensureSpace(ctx, headingHeight + BLOCK_GAP);
   drawText(ctx.page, title.toUpperCase(), PAGE_PADDING_X, ctx.y, ctx.fonts.black, 11, COLORS.dark);
@@ -494,8 +601,8 @@ function drawConditionsHeading(ctx: PdfContext, continued = false) {
   ctx.y += headingHeight;
 }
 
-function drawConditionsSection(ctx: PdfContext, items: ConditionItem[]) {
-  drawConditionsHeading(ctx, false);
+function drawConditionsSection(ctx: PdfContext, items: ConditionItem[], baseTitle?: string) {
+  drawConditionsHeading(ctx, false, baseTitle);
 
   const columnTop = ctx.y;
   const columnWidth = (CONTENT_WIDTH - COLUMN_GAP) / 2;
@@ -511,7 +618,7 @@ function drawConditionsSection(ctx: PdfContext, items: ConditionItem[]) {
 
   const newConditionsPage = () => {
     addPage(ctx);
-    drawConditionsHeading(ctx, true);
+    drawConditionsHeading(ctx, true, baseTitle);
     resetColumns();
   };
 
@@ -639,7 +746,7 @@ function drawFooter(ctx: PdfContext) {
   });
 }
 
-function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, fechaContrato: string, accent: { base: RGB }) {
+function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, fechaContrato: string, accent: { base: RGB }, isEv = false) {
   const headerHeight = 72;
   drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, headerHeight, { color: COLORS.dark });
 
@@ -663,13 +770,20 @@ function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, 
 
   drawText(ctx.page, "Contrato de Garantía Mecánica", leftX, ctx.y + 46, ctx.fonts.regular, 9, rgb(0.8, 0.84, 0.88));
 
-  const pillText = `GARANTICON ${tierLabel}`;
+  const pillText = isEv ? `GARANTICON ${tierLabel} · ELÉCTRICO` : `GARANTICON ${tierLabel}`;
   const pillFontSize = 12.5;
   const pillPaddingX = 12;
   const pillWidth = ctx.fonts.black.widthOfTextAtSize(pillText, pillFontSize) + pillPaddingX * 2;
+  const evBadgeText = "100% BEV";
+  const evBadgeWidth = isEv ? ctx.fonts.black.widthOfTextAtSize(evBadgeText, 8) + 16 : 0;
   const pillX = PAGE_PADDING_X + CONTENT_WIDTH - pillWidth - 16;
   drawRect(ctx.page, pillX, ctx.y + 12, pillWidth, 24, { color: accent.base });
   drawText(ctx.page, pillText, pillX + pillPaddingX, ctx.y + 19, ctx.fonts.black, pillFontSize, COLORS.white);
+  if (isEv) {
+    const badgeX = pillX - evBadgeWidth - 8;
+    drawRect(ctx.page, badgeX, ctx.y + 14, evBadgeWidth, 20, { color: COLORS.green });
+    drawText(ctx.page, evBadgeText, badgeX + 8, ctx.y + 20, ctx.fonts.black, 8, COLORS.white);
+  }
 
   const meta = `Contrato Nº ${contractNumber} · Fecha: ${fechaContrato}`;
   const metaWidth = ctx.fonts.regular.widthOfTextAtSize(meta, 8.5);
@@ -691,6 +805,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
   };
 
   const tier = TIER[data.modalidad] ?? TIER.ESENCIAL;
+  const isEv = Boolean(data.es_electrico);
   const coverage = fmtEUR(data.limite_averia != null ? Number(data.limite_averia) : tier.cobertura);
   const contractLimit = fmtEUR(data.precio_venta);
   const fechaContrato = data.aceptacion_fecha
@@ -706,7 +821,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
   const contactoComprador = [data.comprador_telefono, data.comprador_email].filter(Boolean).join(" · ") || "—";
   const contactoVendedor = [data.vendedor_telefono, data.vendedor_email].filter(Boolean).join(" · ") || "—";
 
-  drawHeader(ctx, tier.nombre, data.numero_poliza, fechaContrato, { base: hex(tier.accent) });
+  drawHeader(ctx, tier.nombre, data.numero_poliza, fechaContrato, { base: hex(tier.accent) }, isEv);
 
   drawFieldSection(ctx, "Datos del vendedor", [
     { label: "Razón social", value: v(data.vendedor_empresa) },
@@ -729,6 +844,14 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     { label: "Fecha de matriculación", value: fmtDate(data.fecha_matriculacion) },
     { label: "Kilometraje", value: data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")} km` : "—" },
     { label: "Valor de tasación", value: fmtEUR(data.precio_venta) },
+    ...(isEv
+      ? [
+          { label: "Autonomía WLTP", value: data.autonomia_wltp != null ? `${Number(data.autonomia_wltp).toLocaleString("es-ES")} km` : "—" },
+          { label: "Capacidad batería", value: data.capacidad_kwh != null ? `${Number(data.capacidad_kwh).toLocaleString("es-ES")} kWh` : "—" },
+          { label: "Conector", value: v(data.tipo_conector) },
+          { label: "Estado de salud (SoH)", value: data.soh_declarado != null ? `${Number(data.soh_declarado).toLocaleString("es-ES")} %` : "—" },
+        ]
+      : []),
   ], 3);
 
   drawFieldSection(ctx, "Vigencia del contrato", [
@@ -736,14 +859,26 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     { label: "Fecha de finalización", value: fmtDate(data.fecha_fin) },
   ], 2);
 
-  drawDeclarationSection(ctx, v(data.defectos_preexistentes) === "—" ? "NINGUNO" : normalizeText(data.defectos_preexistentes));
+  drawDeclarationSection(
+    ctx,
+    v(data.defectos_preexistentes) === "—" ? "NINGUNO" : normalizeText(data.defectos_preexistentes),
+    isEv ? EV_DECLARATION_NOTE : undefined,
+  );
   drawCoverageSection(ctx, `GARANTICON ${tier.nombre}`, coverage, contractLimit, {
     base: hex(tier.accent),
     border: hex(tier.accentDark),
     soft: hex(tier.accentLight),
   });
 
-  drawConditionsSection(ctx, getConditions(coverage, contractLimit).slice(0, 10));
+  if (isEv) {
+    drawConditionsSection(
+      ctx,
+      EV_CONDITIONS_BASE,
+      `Condiciones generales — Modalidad ${tier.nombre} · Eléctrico · Nº ${data.numero_poliza}`,
+    );
+  } else {
+    drawConditionsSection(ctx, getConditions(coverage, contractLimit).slice(0, 10));
+  }
   drawSignatures(ctx, data, coverage, contractLimit);
   drawFooter(ctx);
 

@@ -22,6 +22,8 @@ type W = {
   vehiculo_marca: string; vehiculo_modelo: string; matricula: string; bastidor: string | null;
   fecha_matriculacion: string | null; km_venta: number | null; precio_venta: number | null;
   combustible: string | null; tipo_cambio: string | null; traccion_4x4: boolean;
+  es_electrico: boolean | null; autonomia_wltp: number | null; capacidad_kwh: number | null;
+  tipo_conector: string | null; soh_declarado: number | null;
   modalidad: Modalidad; limite_averia: number;
   fecha_venta: string; fecha_inicio: string; fecha_fin: string;
   estado: "activa" | "expirada" | "cancelada";
@@ -102,6 +104,9 @@ const WarrantyDetail = () => {
                 </div>
                 <div className="flex gap-2">
                   {modalidadBadge(w.modalidad)}
+                  {w.es_electrico && (
+                    <Badge className="bg-emerald-500 hover:bg-emerald-500">⚡ Eléctrico</Badge>
+                  )}
                   {w.estado === "activa" ? <Badge className="bg-emerald-500 hover:bg-emerald-500">Activa</Badge>
                     : w.estado === "expirada" ? <Badge variant="secondary">Expirada</Badge>
                     : <Badge variant="destructive">Cancelada</Badge>}
@@ -143,8 +148,19 @@ const WarrantyDetail = () => {
                 <Field label="Fecha matriculación" value={fmt(w.fecha_matriculacion)} />
                 <Field label="Km en venta" value={w.km_venta?.toLocaleString("es-ES")} />
                 <Field label="Precio venta" value={w.precio_venta ? Number(w.precio_venta).toLocaleString("es-ES") + "€" : null} />
-                <Field label="Combustible" value={w.combustible} />
-                <Field label="Cambio" value={w.tipo_cambio} />
+                {w.es_electrico ? (
+                  <>
+                    <Field label="Autonomía WLTP" value={w.autonomia_wltp ? `${w.autonomia_wltp.toLocaleString("es-ES")} km` : null} />
+                    <Field label="Capacidad batería" value={w.capacidad_kwh ? `${Number(w.capacidad_kwh).toLocaleString("es-ES")} kWh` : null} />
+                    <Field label="Conector" value={w.tipo_conector} />
+                    <Field label="Estado de salud (SoH)" value={w.soh_declarado ? `${Number(w.soh_declarado).toLocaleString("es-ES")} %` : null} />
+                  </>
+                ) : (
+                  <>
+                    <Field label="Combustible" value={w.combustible} />
+                    <Field label="Cambio" value={w.tipo_cambio} />
+                  </>
+                )}
                 <Field label="Tracción 4x4" value={w.traccion_4x4 ? "Sí" : "No"} />
               </CardContent>
             </Card>

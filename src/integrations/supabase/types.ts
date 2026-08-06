@@ -223,7 +223,9 @@ export type Database = {
       }
       warranties: {
         Row: {
+          autonomia_wltp: number | null
           bastidor: string | null
+          capacidad_kwh: number | null
           combustible: string | null
           comprador_cp: string | null
           comprador_direccion: string | null
@@ -235,6 +237,7 @@ export type Database = {
           comprador_telefono: string | null
           created_at: string
           dealer_id: string
+          es_electrico: boolean
           estado: Database["public"]["Enums"]["warranty_status"]
           fecha_fin: string
           fecha_inicio: string
@@ -247,14 +250,18 @@ export type Database = {
           modalidad: Database["public"]["Enums"]["warranty_modality"]
           numero_poliza: string
           precio_venta: number | null
+          soh_declarado: number | null
           tipo_cambio: string | null
+          tipo_conector: string | null
           traccion_4x4: boolean
           updated_at: string
           vehiculo_marca: string
           vehiculo_modelo: string
         }
         Insert: {
+          autonomia_wltp?: number | null
           bastidor?: string | null
+          capacidad_kwh?: number | null
           combustible?: string | null
           comprador_cp?: string | null
           comprador_direccion?: string | null
@@ -266,6 +273,7 @@ export type Database = {
           comprador_telefono?: string | null
           created_at?: string
           dealer_id: string
+          es_electrico?: boolean
           estado?: Database["public"]["Enums"]["warranty_status"]
           fecha_fin: string
           fecha_inicio: string
@@ -278,14 +286,18 @@ export type Database = {
           modalidad: Database["public"]["Enums"]["warranty_modality"]
           numero_poliza: string
           precio_venta?: number | null
+          soh_declarado?: number | null
           tipo_cambio?: string | null
+          tipo_conector?: string | null
           traccion_4x4?: boolean
           updated_at?: string
           vehiculo_marca: string
           vehiculo_modelo: string
         }
         Update: {
+          autonomia_wltp?: number | null
           bastidor?: string | null
+          capacidad_kwh?: number | null
           combustible?: string | null
           comprador_cp?: string | null
           comprador_direccion?: string | null
@@ -297,6 +309,7 @@ export type Database = {
           comprador_telefono?: string | null
           created_at?: string
           dealer_id?: string
+          es_electrico?: boolean
           estado?: Database["public"]["Enums"]["warranty_status"]
           fecha_fin?: string
           fecha_inicio?: string
@@ -309,7 +322,9 @@ export type Database = {
           modalidad?: Database["public"]["Enums"]["warranty_modality"]
           numero_poliza?: string
           precio_venta?: number | null
+          soh_declarado?: number | null
           tipo_cambio?: string | null
+          tipo_conector?: string | null
           traccion_4x4?: boolean
           updated_at?: string
           vehiculo_marca?: string

@@ -28,6 +28,7 @@ type Warranty = {
   vehiculo_marca: string | null;
   vehiculo_modelo: string | null;
   modalidad: Modalidad;
+  es_electrico: boolean | null;
   fecha_inicio: string;
   fecha_fin: string;
   estado: "activa" | "expirada" | "cancelada";
@@ -52,7 +53,7 @@ const DealerDashboard = () => {
     setLoading(true);
     supabase
       .from("warranties")
-      .select("id, numero_poliza, comprador_nombre, matricula, vehiculo_marca, vehiculo_modelo, modalidad, fecha_inicio, fecha_fin, estado, created_at")
+      .select("id, numero_poliza, comprador_nombre, matricula, vehiculo_marca, vehiculo_modelo, modalidad, es_electrico, fecha_inicio, fecha_fin, estado, created_at")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setWarranties((data ?? []) as Warranty[]);
@@ -209,7 +210,14 @@ const DealerDashboard = () => {
                         <TableCell className="text-sm">
                           {[w.vehiculo_marca, w.vehiculo_modelo].filter(Boolean).join(" ") || "—"}
                         </TableCell>
-                        <TableCell>{modalidadBadge(w.modalidad)}</TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5">
+                            {modalidadBadge(w.modalidad)}
+                            {w.es_electrico && (
+                              <span title="Vehículo 100% eléctrico (BEV)" className="text-emerald-600">⚡</span>
+                            )}
+                          </span>
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-sm">
                           {fmt(w.fecha_inicio)} → {fmt(w.fecha_fin)}
                         </TableCell>
