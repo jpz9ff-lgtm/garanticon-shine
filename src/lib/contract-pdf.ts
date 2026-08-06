@@ -313,12 +313,15 @@ function drawFieldSection(ctx: PdfContext, title: string, fields: Field[], colum
   ctx.y += sectionHeight + BLOCK_GAP;
 }
 
-function drawDeclarationSection(ctx: PdfContext, defectos: string) {
+function drawDeclarationSection(ctx: PdfContext, defectos: string, evNote?: string) {
   const titleHeight = 14;
   const intro = "El comprador declara que el vehículo ha sido revisado y entregado sin averías conocidas en el momento de la firma, salvo las indicadas a continuación:";
   const introHeight = textBlockHeight(intro, ctx.fonts.regular, 9, CONTENT_WIDTH - SECTION_PADDING_X * 2, 11.5);
   const defectHeight = textBlockHeight(defectos, ctx.fonts.bold, 10, CONTENT_WIDTH - SECTION_PADDING_X * 2, 12);
-  const sectionHeight = SECTION_PADDING_Y + titleHeight + 8 + introHeight + 8 + 9 + 4 + defectHeight + SECTION_PADDING_Y;
+  const evHeight = evNote
+    ? textBlockHeight(evNote, ctx.fonts.regular, 8.5, CONTENT_WIDTH - SECTION_PADDING_X * 2, 10.7) + 8
+    : 0;
+  const sectionHeight = SECTION_PADDING_Y + titleHeight + 8 + introHeight + 8 + 9 + 4 + defectHeight + evHeight + SECTION_PADDING_Y;
 
   ensureSpace(ctx, sectionHeight + BLOCK_GAP);
   drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, sectionHeight, { color: COLORS.greyLight });
@@ -326,7 +329,10 @@ function drawDeclarationSection(ctx: PdfContext, defectos: string) {
   const start = ctx.y + SECTION_PADDING_Y + 20;
   const used = drawTextBlock(ctx.page, intro, PAGE_PADDING_X + SECTION_PADDING_X, start, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.regular, 9, COLORS.dark, 11.5);
   drawText(ctx.page, "DEFECTOS PREEXISTENTES DECLARADOS", PAGE_PADDING_X + SECTION_PADDING_X, start + used + 8, ctx.fonts.bold, 7.2, COLORS.grey);
-  drawTextBlock(ctx.page, defectos, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.bold, 10, COLORS.dark, 12);
+  const defectUsed = drawTextBlock(ctx.page, defectos, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.bold, 10, COLORS.dark, 12);
+  if (evNote) {
+    drawTextBlock(ctx.page, evNote, PAGE_PADDING_X + SECTION_PADDING_X, start + used + 20 + defectUsed + 8, CONTENT_WIDTH - SECTION_PADDING_X * 2, ctx.fonts.regular, 8.5, COLORS.dark, 10.7);
+  }
   ctx.y += sectionHeight + BLOCK_GAP;
 }
 
