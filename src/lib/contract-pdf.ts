@@ -87,6 +87,7 @@ type ConditionItem = {
   title: string;
   paragraphs?: string[];
   bullets?: string[];
+  closing?: string[];
   highlight?: boolean;
 };
 
