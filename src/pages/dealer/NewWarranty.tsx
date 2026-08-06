@@ -35,6 +35,9 @@ type FormState = {
   bastidor: string; fecha_matriculacion: string; km_venta: string;
   precio_venta: string; combustible: "Gasolina" | "Diésel" | "Híbrido" | "Eléctrico";
   tipo_cambio: "Manual" | "Automático"; traccion_4x4: boolean;
+  // electrico
+  es_electrico: boolean; autonomia_wltp: string; capacidad_kwh: string;
+  tipo_conector: string; soh_declarado: string;
   // garantia
   modalidad: Modalidad; fecha_venta: string; fecha_inicio: string; fecha_fin: string;
   acepta_condiciones: boolean;
@@ -46,6 +49,7 @@ const empty: FormState = {
   vehiculo_marca: "", vehiculo_modelo: "", matricula: "", bastidor: "",
   fecha_matriculacion: "", km_venta: "", precio_venta: "",
   combustible: "Gasolina", tipo_cambio: "Manual", traccion_4x4: false,
+  es_electrico: false, autonomia_wltp: "", capacidad_kwh: "", tipo_conector: "Type 2", soh_declarado: "",
   modalidad: "ESENCIAL",
   fecha_venta: format(new Date(), "yyyy-MM-dd"),
   fecha_inicio: format(new Date(), "yyyy-MM-dd"),
@@ -98,6 +102,11 @@ const NewWarranty = () => {
           combustible: (w.combustible as FormState["combustible"]) ?? "Gasolina",
           tipo_cambio: (w.tipo_cambio as FormState["tipo_cambio"]) ?? "Manual",
           traccion_4x4: Boolean(w.traccion_4x4),
+          es_electrico: Boolean(w.es_electrico),
+          autonomia_wltp: w.autonomia_wltp?.toString() ?? "",
+          capacidad_kwh: w.capacidad_kwh?.toString() ?? "",
+          tipo_conector: w.tipo_conector ?? "Type 2",
+          soh_declarado: w.soh_declarado?.toString() ?? "",
           modalidad: w.modalidad as Modalidad,
           fecha_venta: w.fecha_venta ?? "",
           fecha_inicio: w.fecha_inicio ?? "",
@@ -115,6 +124,11 @@ const NewWarranty = () => {
       // Cuando cambia fecha_inicio, recalcula fecha_fin (+12 meses)
       if (k === "fecha_inicio" && typeof v === "string" && v) {
         next.fecha_fin = format(addMonths(new Date(v), 12), "yyyy-MM-dd");
+      }
+      // Combustible "Eléctrico" activa automáticamente el contrato específico BEV
+      if (k === "combustible") {
+        if (v === "Eléctrico") next.es_electrico = true;
+        else if (d.combustible === "Eléctrico") next.es_electrico = false;
       }
       return next;
     });
@@ -248,6 +262,11 @@ const NewWarranty = () => {
           combustible: data.combustible,
           tipo_cambio: data.tipo_cambio,
           traccion_4x4: data.traccion_4x4,
+          es_electrico: data.es_electrico,
+          autonomia_wltp: data.es_electrico && data.autonomia_wltp !== "" ? Number(data.autonomia_wltp) : null,
+          capacidad_kwh: data.es_electrico && data.capacidad_kwh !== "" ? Number(data.capacidad_kwh) : null,
+          tipo_conector: data.es_electrico ? data.tipo_conector : null,
+          soh_declarado: data.es_electrico && data.soh_declarado !== "" ? Number(data.soh_declarado) : null,
           modalidad: detectedTier.tipo,
           limite_averia: detectedTier.cobertura,
           fecha_venta: data.fecha_venta,
