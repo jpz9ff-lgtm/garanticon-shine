@@ -746,7 +746,7 @@ function drawFooter(ctx: PdfContext) {
   });
 }
 
-function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, fechaContrato: string, accent: { base: RGB }) {
+function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, fechaContrato: string, accent: { base: RGB }, isEv = false) {
   const headerHeight = 72;
   drawRect(ctx.page, PAGE_PADDING_X, ctx.y, CONTENT_WIDTH, headerHeight, { color: COLORS.dark });
 
@@ -770,13 +770,20 @@ function drawHeader(ctx: PdfContext, tierLabel: string, contractNumber: string, 
 
   drawText(ctx.page, "Contrato de Garantía Mecánica", leftX, ctx.y + 46, ctx.fonts.regular, 9, rgb(0.8, 0.84, 0.88));
 
-  const pillText = `GARANTICON ${tierLabel}`;
+  const pillText = isEv ? `GARANTICON ${tierLabel} · ELÉCTRICO` : `GARANTICON ${tierLabel}`;
   const pillFontSize = 12.5;
   const pillPaddingX = 12;
   const pillWidth = ctx.fonts.black.widthOfTextAtSize(pillText, pillFontSize) + pillPaddingX * 2;
+  const evBadgeText = "100% BEV";
+  const evBadgeWidth = isEv ? ctx.fonts.black.widthOfTextAtSize(evBadgeText, 8) + 16 : 0;
   const pillX = PAGE_PADDING_X + CONTENT_WIDTH - pillWidth - 16;
   drawRect(ctx.page, pillX, ctx.y + 12, pillWidth, 24, { color: accent.base });
   drawText(ctx.page, pillText, pillX + pillPaddingX, ctx.y + 19, ctx.fonts.black, pillFontSize, COLORS.white);
+  if (isEv) {
+    const badgeX = pillX - evBadgeWidth - 8;
+    drawRect(ctx.page, badgeX, ctx.y + 14, evBadgeWidth, 20, { color: COLORS.green });
+    drawText(ctx.page, evBadgeText, badgeX + 8, ctx.y + 20, ctx.fonts.black, 8, COLORS.white);
+  }
 
   const meta = `Contrato Nº ${contractNumber} · Fecha: ${fechaContrato}`;
   const metaWidth = ctx.fonts.regular.widthOfTextAtSize(meta, 8.5);
@@ -798,6 +805,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
   };
 
   const tier = TIER[data.modalidad] ?? TIER.ESENCIAL;
+  const isEv = Boolean(data.es_electrico);
   const coverage = fmtEUR(data.limite_averia != null ? Number(data.limite_averia) : tier.cobertura);
   const contractLimit = fmtEUR(data.precio_venta);
   const fechaContrato = data.aceptacion_fecha
@@ -813,7 +821,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
   const contactoComprador = [data.comprador_telefono, data.comprador_email].filter(Boolean).join(" · ") || "—";
   const contactoVendedor = [data.vendedor_telefono, data.vendedor_email].filter(Boolean).join(" · ") || "—";
 
-  drawHeader(ctx, tier.nombre, data.numero_poliza, fechaContrato, { base: hex(tier.accent) });
+  drawHeader(ctx, tier.nombre, data.numero_poliza, fechaContrato, { base: hex(tier.accent) }, isEv);
 
   drawFieldSection(ctx, "Datos del vendedor", [
     { label: "Razón social", value: v(data.vendedor_empresa) },
@@ -836,6 +844,14 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     { label: "Fecha de matriculación", value: fmtDate(data.fecha_matriculacion) },
     { label: "Kilometraje", value: data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")} km` : "—" },
     { label: "Valor de tasación", value: fmtEUR(data.precio_venta) },
+    ...(isEv
+      ? [
+          { label: "Autonomía WLTP", value: data.autonomia_wltp != null ? `${Number(data.autonomia_wltp).toLocaleString("es-ES")} km` : "—" },
+          { label: "Capacidad batería", value: data.capacidad_kwh != null ? `${Number(data.capacidad_kwh).toLocaleString("es-ES")} kWh` : "—" },
+          { label: "Conector", value: v(data.tipo_conector) },
+          { label: "Estado de salud (SoH)", value: data.soh_declarado != null ? `${Number(data.soh_declarado).toLocaleString("es-ES")} %` : "—" },
+        ]
+      : []),
   ], 3);
 
   drawFieldSection(ctx, "Vigencia del contrato", [
@@ -843,14 +859,26 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     { label: "Fecha de finalización", value: fmtDate(data.fecha_fin) },
   ], 2);
 
-  drawDeclarationSection(ctx, v(data.defectos_preexistentes) === "—" ? "NINGUNO" : normalizeText(data.defectos_preexistentes));
-  drawCoverageSection(ctx, `GARANTICON ${tier.nombre}`, coverage, contractLimit, {
+  drawDeclarationSection(
+    ctx,
+    v(data.defectos_preexistentes) === "—" ? "NINGUNO" : normalizeText(data.defectos_preexistentes),
+    isEv ? EV_DECLARATION_NOTE : undefined,
+  );
+  drawCoverageSection(ctx, isEv ? `GARANTICON ${tier.nombre} · ELÉCTRICO` : `GARANTICON ${tier.nombre}`, coverage, contractLimit, {
     base: hex(tier.accent),
     border: hex(tier.accentDark),
     soft: hex(tier.accentLight),
   });
 
-  drawConditionsSection(ctx, getConditions(coverage, contractLimit).slice(0, 10));
+  if (isEv) {
+    drawConditionsSection(
+      ctx,
+      EV_CONDITIONS_BASE,
+      `Condiciones generales — Modalidad ${tier.nombre} · Eléctrico · Nº ${data.numero_poliza}`,
+    );
+  } else {
+    drawConditionsSection(ctx, getConditions(coverage, contractLimit).slice(0, 10));
+  }
   drawSignatures(ctx, data, coverage, contractLimit);
   drawFooter(ctx);
 
