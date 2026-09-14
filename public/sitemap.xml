@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://garanticon.es/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://garanticon.es/asistencia</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://garanticon.es/profesionales</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://garanticon.es/privacidad</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://garanticon.es/aviso-legal</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://garanticon.es/politica-de-cookies</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://garanticon.es/terminos</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>
