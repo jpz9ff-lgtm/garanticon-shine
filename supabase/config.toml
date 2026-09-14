@@ -15,9 +15,6 @@ verify_jwt = false
 [functions.dealer-login]
 verify_jwt = false
 
-[functions.resolve-username]
-verify_jwt = false
-
 [functions.update-dealer-credentials]
 verify_jwt = true
 
