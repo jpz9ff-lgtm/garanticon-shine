@@ -15,10 +15,19 @@ export interface LookupResult {
   policy: string;
 }
 
-type WarrantyResp = ContractData & {
+/** Respuesta pública mínima: sin datos personales del comprador. */
+type WarrantyResp = {
   id: string;
+  numero_poliza: string;
+  modalidad: string;
   estado: "activa" | "expirada" | "cancelada";
   limite_averia: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  vehiculo_marca: string;
+  vehiculo_modelo: string;
+  matricula: string;
+  es_electrico?: boolean;
 };
 
 interface Props {
@@ -33,10 +42,16 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [warranty, setWarranty] = useState<WarrantyResp | null>(null);
-  const [dealer, setDealer] = useState<{ nombre_empresa: string; cif: string } | null>(null);
+  const [dealer, setDealer] = useState<{ nombre_empresa: string; cif?: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  // Verificación del titular antes de mostrar datos personales o el contrato
+  const [verification, setVerification] = useState<{ available: boolean; hint: string | null } | null>(null);
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [fullData, setFullData] = useState<ContractData | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
