@@ -13,7 +13,7 @@ const inputCls =
 
 export const ProfessionalsAccess = () => {
   const navigate = useNavigate();
-  const { signIn, user, loading } = useAuth();
+  const { signInWithIdentifier, user, loading } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
