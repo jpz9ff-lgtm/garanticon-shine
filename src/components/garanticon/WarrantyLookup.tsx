@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Car, ArrowRight, Download, FileText } from "lucide-react";
+import { Loader2, Car, ArrowRight, Download, FileText, ShieldCheck } from "lucide-react";
 import { format, differenceInDays, differenceInMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,10 +15,19 @@ export interface LookupResult {
   policy: string;
 }
 
-type WarrantyResp = ContractData & {
+/** Respuesta pública mínima: sin datos personales del comprador. */
+type WarrantyResp = {
   id: string;
+  numero_poliza: string;
+  modalidad: string;
   estado: "activa" | "expirada" | "cancelada";
   limite_averia: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  vehiculo_marca: string;
+  vehiculo_modelo: string;
+  matricula: string;
+  es_electrico?: boolean;
 };
 
 interface Props {
@@ -33,10 +42,16 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [warranty, setWarranty] = useState<WarrantyResp | null>(null);
-  const [dealer, setDealer] = useState<{ nombre_empresa: string; cif: string } | null>(null);
+  const [dealer, setDealer] = useState<{ nombre_empresa: string; cif?: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  // Verificación del titular antes de mostrar datos personales o el contrato
+  const [verification, setVerification] = useState<{ available: boolean; hint: string | null } | null>(null);
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [fullData, setFullData] = useState<ContractData | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -82,6 +97,10 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
       } else if (data?.warranty) {
         setWarranty(data.warranty);
         setDealer(data.dealer ?? null);
+        setVerification(data.verification ?? null);
+        setCodeSent(false);
+        setCode("");
+        setFullData(null);
         onResult({ plate, policy });
       }
     } catch {
@@ -92,15 +111,63 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
     }
   };
 
-  const handleDownload = async () => {
-    if (!warranty) return;
+  /** Paso 1 de la verificación: enviamos un código al contacto ya registrado. */
+  const handleRequestCode = async () => {
+    setVerifying(true);
+    try {
+      await supabase.functions.invoke("request-policy-access", {
+        body: { matricula: plate, numero_poliza: policy },
+      });
+      setCodeSent(true);
+      toast({
+        title: "Código enviado",
+        description: verification?.hint
+          ? `Si los datos son correctos, hemos enviado un código a ${verification.hint}.`
+          : "Si los datos son correctos, hemos enviado un código al contacto registrado en la póliza.",
+      });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Inténtalo de nuevo en unos minutos." });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  /** Paso 2: el servidor valida el código y devuelve el expediente para el contrato. */
+  const handleVerifyAndDownload = async () => {
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-policy-access", {
+        body: { matricula: plate, numero_poliza: policy, codigo: code },
+      });
+      if (error || data?.error || !data?.warranty) {
+        toast({ variant: "destructive", title: "Código no válido", description: "El código no es válido o ha caducado." });
+        return;
+      }
+      setFullData(data.warranty as ContractData);
+      setDealer(data.dealer ?? null);
+      setCode("");
+      await downloadPdf(data.warranty as ContractData, data.dealer ?? null);
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo verificar el código." });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const downloadPdf = async (
+    contract: ContractData,
+    dealerData: { nombre_empresa: string; cif?: string } | null,
+  ) => {
     setDownloading(true);
     try {
-      await generateContractPdf({
-        ...warranty,
-        vendedor_empresa: dealer?.nombre_empresa,
-        vendedor_cif: dealer?.cif,
-      }, `Garanticon_${warranty.numero_poliza}.pdf`);
+      await generateContractPdf(
+        {
+          ...contract,
+          vendedor_empresa: dealerData?.nombre_empresa,
+          vendedor_cif: dealerData?.cif,
+        },
+        `Garanticon_${contract.numero_poliza}.pdf`,
+      );
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: err?.message ?? "No se pudo generar el PDF" });
     } finally {
@@ -262,17 +329,85 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <Button
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  variant="outline"
-                  className="group h-12 w-full rounded-xl text-base font-semibold"
-                >
-                  {downloading
-                    ? <><Loader2 className="mr-2 animate-spin" /> Generando PDF…</>
-                    : <><Download className="mr-2" /> Descargar contrato (PDF)</>}
-                </Button>
+              {/* Descarga del contrato: solo tras verificar al titular */}
+              <div className="space-y-3 rounded-2xl border bg-background p-5">
+                {fullData ? (
+                  <Button
+                    onClick={() => downloadPdf(fullData, dealer)}
+                    disabled={downloading}
+                    variant="outline"
+                    className="group h-12 w-full rounded-xl text-base font-semibold"
+                  >
+                    {downloading
+                      ? <><Loader2 className="mr-2 animate-spin" /> Generando PDF…</>
+                      : <><Download className="mr-2" /> Descargar contrato (PDF)</>}
+                  </Button>
+                ) : !verification?.available ? (
+                  <p className="text-sm text-muted-foreground">
+                    Para descargar tu contrato necesitamos verificar tu identidad. No hay un contacto de
+                    verificación en esta póliza: escríbenos a{" "}
+                    <a href="mailto:info@garanticon.es" className="font-medium text-primary hover:underline">
+                      info@garanticon.es
+                    </a>.
+                  </p>
+                ) : !codeSent ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Por seguridad, el contrato solo se entrega al titular. Te enviaremos un código de un
+                      solo uso al contacto registrado en la póliza
+                      {verification.hint ? ` (${verification.hint})` : ""}.
+                    </p>
+                    <Button
+                      onClick={handleRequestCode}
+                      disabled={verifying}
+                      variant="outline"
+                      className="h-12 w-full rounded-xl text-base font-semibold"
+                    >
+                      {verifying
+                        ? <><Loader2 className="mr-2 animate-spin" /> Enviando código…</>
+                        : <><ShieldCheck className="mr-2" /> Enviarme el código para descargar el contrato</>}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Label htmlFor="access-code" className="text-sm font-semibold">
+                      Código de verificación (6 dígitos)
+                    </Label>
+                    <Input
+                      id="access-code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="000000"
+                      className="h-12 rounded-xl text-center text-lg font-semibold tracking-[0.4em]"
+                    />
+                    <Button
+                      onClick={handleVerifyAndDownload}
+                      disabled={verifying || downloading || code.length !== 6}
+                      className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground"
+                    >
+                      {verifying || downloading
+                        ? <><Loader2 className="mr-2 animate-spin" /> Verificando…</>
+                        : <><Download className="mr-2" /> Verificar y descargar contrato</>}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={handleRequestCode}
+                      disabled={verifying}
+                      className="w-full text-xs font-medium text-primary hover:underline"
+                    >
+                      Volver a enviarme el código
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      El código caduca en 10 minutos y solo puede usarse una vez.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div className="grid gap-3">
                 <Button
                   onClick={onRequestAssistance}
                   className="group h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:brightness-110"

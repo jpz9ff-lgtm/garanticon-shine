@@ -1,118 +1,87 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  adminClient,
+  clientIp,
+  corsHeaders,
+  isRateLimited,
+  json,
+  normalizePlate,
+  normalizePolicy,
+} from "../_shared/rate-limit.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-// Rate limiting: 10 req/min/IP, sliding window in-memory
-const RATE_LIMIT = 10;
-const WINDOW_MS = 60_000;
-const ipHits = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (arr.length >= RATE_LIMIT) {
-    ipHits.set(ip, arr);
-    return true;
-  }
-  arr.push(now);
-  ipHits.set(ip, arr);
-  // Garbage collect occasionally
-  if (ipHits.size > 5000) {
-    for (const [k, v] of ipHits) {
-      const filtered = v.filter((t) => now - t < WINDOW_MS);
-      if (filtered.length === 0) ipHits.delete(k);
-      else ipHits.set(k, filtered);
-    }
-  }
-  return false;
-}
-
+/**
+ * Consulta pública mínima: matrícula + número de póliza devuelven solo el estado de
+ * cobertura. Los datos personales y el contrato requieren verificación del titular
+ * (request-policy-access / verify-policy-access).
+ */
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim() || "unknown";
-  if (isRateLimited(ip)) {
-    return new Response(
-      JSON.stringify({ error: "Demasiadas consultas. Espera un minuto e inténtalo de nuevo." }),
-      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+  const admin = adminClient();
+  const ip = clientIp(req);
+
+  if (await isRateLimited(admin, "lookup-warranty", ip, 10, 60)) {
+    return json({ error: "Demasiadas consultas. Espera un minuto e inténtalo de nuevo." }, 429);
   }
 
   try {
     const body = await req.json();
-    const matricula = String(body?.matricula ?? "").toUpperCase().replace(/\s|-/g, "").trim();
-    const numero_poliza = String(body?.numero_poliza ?? "").toUpperCase().trim();
+    const matricula = normalizePlate(body?.matricula);
+    const numero_poliza = normalizePolicy(body?.numero_poliza);
 
     if (!matricula || matricula.length < 4 || matricula.length > 15) {
-      return new Response(JSON.stringify({ error: "Matrícula inválida" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Matrícula inválida" }, 400);
     }
     if (!numero_poliza || numero_poliza.length < 4 || numero_poliza.length > 50) {
-      return new Response(JSON.stringify({ error: "Número de póliza inválido" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Número de póliza inválido" }, 400);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    const { data: w, error } = await supabase
+    const { data: w, error } = await admin
       .from("warranties")
       .select(
-        "id,numero_poliza,modalidad,estado,limite_averia,fecha_venta,fecha_inicio,fecha_fin," +
-          "comprador_nombre,comprador_dni,comprador_telefono,comprador_email,comprador_direccion," +
-          "comprador_cp,comprador_poblacion,comprador_provincia," +
-          "vehiculo_marca,vehiculo_modelo,matricula,bastidor,fecha_matriculacion,km_venta," +
-          "precio_venta,combustible,tipo_cambio,traccion_4x4,dealer_id," +
-          "es_electrico",
+        "id,numero_poliza,modalidad,estado,limite_averia,fecha_inicio,fecha_fin," +
+          "vehiculo_marca,vehiculo_modelo,matricula,es_electrico,dealer_id,comprador_email",
       )
       .eq("matricula", matricula)
       .eq("numero_poliza", numero_poliza)
       .maybeSingle();
 
-    if (error) {
-      return new Response(JSON.stringify({ error: "Error al consultar" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (error) return json({ error: "Error al consultar" }, 500);
+    if (!w) return json({ error: "No encontramos ninguna póliza con esos datos." }, 404);
 
-    if (!w) {
-      return new Response(JSON.stringify({ error: "No encontramos ninguna póliza con esos datos." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Datos del concesionario para el contrato
-    const { data: dealer } = await supabase
+    const { data: dealer } = await admin
       .from("dealers")
-      .select("nombre_empresa,cif")
+      .select("nombre_empresa")
       .eq("id", w.dealer_id)
       .maybeSingle();
 
-    return new Response(
-      JSON.stringify({
-        warranty: w,
-        dealer: dealer ?? null,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (e) {
-    return new Response(JSON.stringify({ error: "Error inesperado" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const maskEmail = (e: string) => {
+      const [u, d] = e.split("@");
+      if (!d) return "•••";
+      return `${u.slice(0, 1)}${"•".repeat(Math.max(2, u.length - 1))}@${d}`;
+    };
+
+    return json({
+      warranty: {
+        id: w.id,
+        numero_poliza: w.numero_poliza,
+        modalidad: w.modalidad,
+        estado: w.estado,
+        limite_averia: w.limite_averia,
+        fecha_inicio: w.fecha_inicio,
+        fecha_fin: w.fecha_fin,
+        vehiculo_marca: w.vehiculo_marca,
+        vehiculo_modelo: w.vehiculo_modelo,
+        matricula: w.matricula,
+        es_electrico: w.es_electrico,
+      },
+      dealer: dealer ? { nombre_empresa: dealer.nombre_empresa } : null,
+      // Solo indica si es posible verificar por correo, con destino enmascarado.
+      verification: {
+        available: Boolean(w.comprador_email),
+        hint: w.comprador_email ? maskEmail(String(w.comprador_email)) : null,
+      },
     });
+  } catch {
+    return json({ error: "Error inesperado" }, 500);
   }
 });

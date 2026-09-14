@@ -19,6 +19,7 @@ interface AuthContextValue {
   dealerError: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithIdentifier: (identifier: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshDealer: () => Promise<void>;
 }
@@ -154,6 +155,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /**
+   * Acceso por usuario o email. La resolución del identificador ocurre en el
+   * servidor, que nunca devuelve el correo ni confirma si la cuenta existe.
+   */
+  const signInWithIdentifier = async (identifier: string, password: string) => {
+    setLoading(true);
+    setDealerError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("dealer-login", {
+        body: { identifier: identifier.trim(), password },
+      });
+
+      let message: string | null = null;
+      if (error) {
+        try {
+          const parsed = await (error as { context?: Response }).context?.json?.();
+          message = parsed?.error ?? null;
+        } catch {
+          message = null;
+        }
+        message = message ?? "Credenciales incorrectas";
+      } else if (data?.error) {
+        message = data.error;
+      }
+
+      if (message || !data?.session) {
+        setLoading(false);
+        return { error: message ?? "Credenciales incorrectas" };
+      }
+
+      const { error: sessErr } = await supabase.auth.setSession(data.session);
+      if (sessErr) {
+        setLoading(false);
+        return { error: "Credenciales incorrectas" };
+      }
+      return { error: null };
+    } catch {
+      setLoading(false);
+      return { error: "No se ha podido conectar con el servicio de acceso." };
+    }
+  };
+
   const signOut = async () => {
     setLoading(true);
     await supabase.auth.signOut();
@@ -179,7 +222,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, dealer, dealerError, loading, signIn, signOut, refreshDealer }}>
+    <AuthContext.Provider
+      value={{ user, session, dealer, dealerError, loading, signIn, signInWithIdentifier, signOut, refreshDealer }}
+    >
       {children}
     </AuthContext.Provider>
   );

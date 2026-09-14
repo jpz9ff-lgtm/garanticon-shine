@@ -10,7 +10,9 @@ export interface TemplateEntry {
 }
 
 import { template as assistanceNotification } from './assistance-notification.tsx'
+import { template as policyAccessCode } from './policy-access-code.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'assistance-notification': assistanceNotification,
+  'policy-access-code': policyAccessCode,
 }

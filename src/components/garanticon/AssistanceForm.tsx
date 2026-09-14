@@ -72,41 +72,29 @@ export const AssistanceForm = ({ prefillPlate = "", prefillPolicy = "", embedded
     setErrors({});
     setSubmitting(true);
 
-    const mensajeFinal = `[${parsed.data.tipo.toUpperCase()}] ${parsed.data.descripcion}\n\n— ${parsed.data.nombre} · Tel: ${parsed.data.telefono}`;
-
+    // El registro y el aviso interno se hacen en el servidor, con validación,
+    // límites por origen e idempotencia. El navegador no escribe en la base de datos.
     const submissionId = crypto.randomUUID();
-    const { error } = await supabase.from("contacts").insert({
-      id: submissionId,
-      nombre: parsed.data.nombre,
-      email: parsed.data.email || null,
-      matricula: parsed.data.matricula || null,
-      numero_poliza: parsed.data.numero_poliza || null,
-      mensaje: mensajeFinal,
+    const { data, error } = await supabase.functions.invoke("submit-assistance", {
+      body: {
+        ...parsed.data,
+        website: String(fd.get("website") || ""),
+        submissionId,
+      },
     });
-
-    if (!error) {
-      // Aviso interno a info@garanticon.es (no bloquea al usuario si falla)
-      supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "assistance-notification",
-          idempotencyKey: `assistance-${submissionId}`,
-          templateData: {
-            nombre: parsed.data.nombre,
-            telefono: parsed.data.telefono,
-            email: parsed.data.email || "",
-            matricula: parsed.data.matricula || "",
-            numero_poliza: parsed.data.numero_poliza || "",
-            tipo: parsed.data.tipo,
-            descripcion: parsed.data.descripcion,
-          },
-        },
-      }).catch((e) => console.error("notify email failed", e));
-    }
 
     setSubmitting(false);
     setCooldown(30);
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: "No pudimos enviar tu consulta. Inténtalo de nuevo." });
+
+    if (error || data?.error) {
+      let description = "No pudimos enviar tu consulta. Inténtalo de nuevo.";
+      const ctx = (error as { context?: Response } | null)?.context;
+      if (ctx?.status === 429) {
+        description = "Has enviado varias consultas seguidas. Inténtalo pasados unos minutos.";
+      } else if (data?.error) {
+        description = data.error;
+      }
+      toast({ variant: "destructive", title: "Error", description });
       return;
     }
     setSubmitted(true);

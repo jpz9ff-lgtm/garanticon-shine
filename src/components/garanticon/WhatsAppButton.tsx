@@ -1,7 +1,7 @@
 export const WhatsAppButton = () => {
   return (
     <a
-      href="https://api.whatsapp.com/send?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20mi%20garant%C3%ADa"
+      href="https://api.whatsapp.com/send?phone=34919930903&text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20mi%20garant%C3%ADa"
       target="_blank"
       rel="noreferrer"
       aria-label="Contactar por WhatsApp"

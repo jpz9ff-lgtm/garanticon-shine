@@ -13,7 +13,7 @@ const inputCls =
 
 export const ProfessionalsAccess = () => {
   const navigate = useNavigate();
-  const { signIn, user, loading } = useAuth();
+  const { signInWithIdentifier, user, loading } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,33 +53,8 @@ export const ProfessionalsAccess = () => {
     setFormError(null);
     setSubmitting(true);
 
-    let loginEmail = trimmedIdentifier;
-
     try {
-      if (!loginEmail.includes("@")) {
-        const { data, error: fnErr } = await supabase.functions.invoke("resolve-username", {
-          body: { username: loginEmail },
-        });
-
-        if (fnErr) {
-          throw new Error(fnErr.message || "No se ha podido resolver el usuario.");
-        }
-
-        if (!data?.email) {
-          const message = "Revisa el nombre de usuario o usa tu email.";
-          setFormError(message);
-          toast({
-            variant: "destructive",
-            title: "Usuario no encontrado",
-            description: message,
-          });
-          return;
-        }
-
-        loginEmail = data.email;
-      }
-
-      const { error } = await signIn(loginEmail, trimmedPassword);
+      const { error } = await signInWithIdentifier(trimmedIdentifier, trimmedPassword);
 
       if (error) {
         setFormError(error);
