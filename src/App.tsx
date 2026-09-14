@@ -23,6 +23,7 @@ import DealerAccount from "./pages/dealer/DealerAccount.tsx";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/dealer/ProtectedRoute";
 import { CookieBanner } from "@/components/garanticon/CookieBanner";
+import { PrivateRouteMeta } from "@/components/PrivateRouteMeta";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <PrivateRouteMeta />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/mi-poliza" element={<PolicyArea />} />
