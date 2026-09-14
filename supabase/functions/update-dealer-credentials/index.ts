@@ -22,6 +22,16 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) return json({ error: "Sesión no válida" }, 401);
     const userId = userData.user.id;
 
+    // Cuenta desactivada: bloqueada en servidor aunque siga usando una sesión previa
+    const { data: dealerRow } = await admin
+      .from("dealers")
+      .select("activo")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!dealerRow || dealerRow.activo === false) {
+      return json({ error: "Tu cuenta no está activa" }, 403);
+    }
+
     const body = await req.json();
     const { email, password, username, currentPassword } = body as {
       email?: string;
@@ -41,6 +51,11 @@ Deno.serve(async (req) => {
       password: currentPassword,
     });
     if (signInErr) return json({ error: "Contraseña actual incorrecta" }, 403);
+
+    // Política de contraseñas verificada en servidor: mínimo 15 caracteres
+    if (password && password.length < 15) {
+      return json({ error: "La contraseña debe tener al menos 15 caracteres." }, 400);
+    }
 
     // Check username uniqueness
     if (username) {
@@ -77,7 +92,16 @@ Deno.serve(async (req) => {
       if (dErr) return json({ error: dErr.message }, 400);
     }
 
-    return json({ ok: true });
+    // Tras cambiar credenciales, se invalidan las demás sesiones del usuario
+    if (password || email) {
+      try {
+        await admin.auth.admin.signOut(jwt, "others");
+      } catch (e) {
+        console.error("session invalidation failed", String(e));
+      }
+    }
+
+    return json({ ok: true, sessionsRevoked: Boolean(password || email) });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
