@@ -22,24 +22,6 @@
   <meta name="twitter:title" content="Garanticon — Tu garantía, siempre contigo">
   <meta property="og:description" content="Garanticon: garantía premium para tu coche en España. Consulta tu póliza y solicita asistencia al instante.">
   <meta name="twitter:description" content="Garanticon: garantía premium para tu coche en España. Consulta tu póliza y solicita asistencia al instante.">
-  <!--
-    Protección anti-enmarcado del lado del cliente. Es una red de seguridad:
-    la protección real (X-Frame-Options / CSP frame-ancestors) debe enviarla
-    el alojamiento como cabecera HTTP (ver public/_headers).
-  -->
-  <script>
-    (function () {
-      try {
-        if (window.top !== window.self && window.top.location.origin !== window.self.location.origin) {
-          window.top.location = window.self.location.href;
-        }
-      } catch (e) {
-        // Origen distinto y no accesible: la página está enmarcada por un tercero
-        document.documentElement.style.display = "none";
-        window.location.href = window.self.location.href;
-      }
-    })();
-  </script>
 </head>
 
   <body>
