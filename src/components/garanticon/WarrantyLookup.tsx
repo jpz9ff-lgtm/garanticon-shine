@@ -93,7 +93,8 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
         body: { matricula: plate, numero_poliza: policy },
       });
       if (error || data?.error) {
-        setErrorMsg(data?.error ?? "No pudimos consultar tu póliza. Inténtalo de nuevo.");
+        // Mensaje uniforme: no revela si la póliza existe
+        setErrorMsg("No encontramos ninguna póliza con esos datos. Revisa la matrícula y el número de póliza.");
       } else if (data?.warranty) {
         setWarranty(data.warranty);
         setDealer(data.dealer ?? null);
