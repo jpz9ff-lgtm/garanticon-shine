@@ -3,6 +3,18 @@ project_id = "lrrywberisrqwyfzyhfj"
 [functions.lookup-warranty]
 verify_jwt = false
 
+[functions.request-policy-access]
+verify_jwt = false
+
+[functions.verify-policy-access]
+verify_jwt = false
+
+[functions.submit-assistance]
+verify_jwt = false
+
+[functions.dealer-login]
+verify_jwt = false
+
 [functions.resolve-username]
 verify_jwt = false
 
