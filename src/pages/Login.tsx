@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
-  const { signIn, user, dealer, dealerError, loading, refreshDealer } = useAuth();
+  const { signInWithIdentifier, user, dealer, dealerError, loading, refreshDealer } = useAuth();
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -32,50 +32,11 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    let loginEmail = identifier.trim();
-    if (loginEmail && !loginEmail.includes("@")) {
-      try {
-        const { data, error: fnErr } = await supabase.functions.invoke("resolve-username", {
-          body: { username: loginEmail },
-        });
-        if (fnErr) throw fnErr;
-        if (!data?.email) {
-          setSubmitting(false);
-          toast({ variant: "destructive", title: "Usuario no encontrado", description: "Revisa el nombre de usuario o usa tu email." });
-          return;
-        }
-        loginEmail = data.email;
-      } catch {
-        setSubmitting(false);
-        toast({ variant: "destructive", title: "Error de conexión", description: "Inténtalo de nuevo en unos segundos." });
-        return;
-      }
-    }
-    const { error } = await signIn(loginEmail, password);
+    const { error } = await signInWithIdentifier(identifier, password);
     if (error) {
       setSubmitting(false);
       toast({ variant: "destructive", title: "No se ha podido iniciar sesión", description: error });
       return;
-    }
-    // Comprobar si el dealer está activo antes de navegar
-    const { data: sessData } = await supabase.auth.getSession();
-    const uid = sessData.session?.user?.id;
-    if (uid) {
-      const { data: dealerRow } = await supabase
-        .from("dealers")
-        .select("activo")
-        .eq("user_id", uid)
-        .maybeSingle();
-      if (dealerRow && dealerRow.activo === false) {
-        toast({
-          variant: "destructive",
-          title: "Cuenta desactivada",
-          description: "Tu cuenta está desactivada. Contacta con info@garanticon.es.",
-        });
-        await supabase.auth.signOut();
-        setSubmitting(false);
-        return;
-      }
     }
     navigate("/dealer/dashboard", { replace: true });
   };
