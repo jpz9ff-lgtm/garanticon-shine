@@ -340,11 +340,39 @@ export type Database = {
           },
         ]
       }
+      warranty_audit: {
+        Row: {
+          actor_user_id: string | null
+          changed_fields: string[]
+          created_at: string
+          id: string
+          operation: string
+          warranty_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          changed_fields?: string[]
+          created_at?: string
+          id?: string
+          operation: string
+          warranty_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          changed_fields?: string[]
+          created_at?: string
+          id?: string
+          operation?: string
+          warranty_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      active_dealer_id: { Args: { _user_id: string }; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -363,6 +391,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_dealer: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
