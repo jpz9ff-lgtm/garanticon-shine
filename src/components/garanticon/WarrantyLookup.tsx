@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Car, ArrowRight, Download, FileText } from "lucide-react";
+import { Loader2, Car, ArrowRight, Download, FileText, ShieldCheck } from "lucide-react";
 import { format, differenceInDays, differenceInMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -329,17 +329,85 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <Button
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  variant="outline"
-                  className="group h-12 w-full rounded-xl text-base font-semibold"
-                >
-                  {downloading
-                    ? <><Loader2 className="mr-2 animate-spin" /> Generando PDF…</>
-                    : <><Download className="mr-2" /> Descargar contrato (PDF)</>}
-                </Button>
+              {/* Descarga del contrato: solo tras verificar al titular */}
+              <div className="space-y-3 rounded-2xl border bg-background p-5">
+                {fullData ? (
+                  <Button
+                    onClick={() => downloadPdf(fullData, dealer)}
+                    disabled={downloading}
+                    variant="outline"
+                    className="group h-12 w-full rounded-xl text-base font-semibold"
+                  >
+                    {downloading
+                      ? <><Loader2 className="mr-2 animate-spin" /> Generando PDF…</>
+                      : <><Download className="mr-2" /> Descargar contrato (PDF)</>}
+                  </Button>
+                ) : !verification?.available ? (
+                  <p className="text-sm text-muted-foreground">
+                    Para descargar tu contrato necesitamos verificar tu identidad. No hay un contacto de
+                    verificación en esta póliza: escríbenos a{" "}
+                    <a href="mailto:info@garanticon.es" className="font-medium text-primary hover:underline">
+                      info@garanticon.es
+                    </a>.
+                  </p>
+                ) : !codeSent ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Por seguridad, el contrato solo se entrega al titular. Te enviaremos un código de un
+                      solo uso al contacto registrado en la póliza
+                      {verification.hint ? ` (${verification.hint})` : ""}.
+                    </p>
+                    <Button
+                      onClick={handleRequestCode}
+                      disabled={verifying}
+                      variant="outline"
+                      className="h-12 w-full rounded-xl text-base font-semibold"
+                    >
+                      {verifying
+                        ? <><Loader2 className="mr-2 animate-spin" /> Enviando código…</>
+                        : <><ShieldCheck className="mr-2" /> Enviarme el código para descargar el contrato</>}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Label htmlFor="access-code" className="text-sm font-semibold">
+                      Código de verificación (6 dígitos)
+                    </Label>
+                    <Input
+                      id="access-code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="000000"
+                      className="h-12 rounded-xl text-center text-lg font-semibold tracking-[0.4em]"
+                    />
+                    <Button
+                      onClick={handleVerifyAndDownload}
+                      disabled={verifying || downloading || code.length !== 6}
+                      className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground"
+                    >
+                      {verifying || downloading
+                        ? <><Loader2 className="mr-2 animate-spin" /> Verificando…</>
+                        : <><Download className="mr-2" /> Verificar y descargar contrato</>}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={handleRequestCode}
+                      disabled={verifying}
+                      className="w-full text-xs font-medium text-primary hover:underline"
+                    >
+                      Volver a enviarme el código
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      El código caduca en 10 minutos y solo puede usarse una vez.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div className="grid gap-3">
                 <Button
                   onClick={onRequestAssistance}
                   className="group h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:brightness-110"
