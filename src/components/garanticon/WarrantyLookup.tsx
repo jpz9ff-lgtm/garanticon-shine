@@ -97,6 +97,10 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
       } else if (data?.warranty) {
         setWarranty(data.warranty);
         setDealer(data.dealer ?? null);
+        setVerification(data.verification ?? null);
+        setCodeSent(false);
+        setCode("");
+        setFullData(null);
         onResult({ plate, policy });
       }
     } catch {
@@ -107,15 +111,63 @@ export const WarrantyLookup = ({ onResult, onRequestAssistance, embedded = false
     }
   };
 
-  const handleDownload = async () => {
-    if (!warranty) return;
+  /** Paso 1 de la verificación: enviamos un código al contacto ya registrado. */
+  const handleRequestCode = async () => {
+    setVerifying(true);
+    try {
+      await supabase.functions.invoke("request-policy-access", {
+        body: { matricula: plate, numero_poliza: policy },
+      });
+      setCodeSent(true);
+      toast({
+        title: "Código enviado",
+        description: verification?.hint
+          ? `Si los datos son correctos, hemos enviado un código a ${verification.hint}.`
+          : "Si los datos son correctos, hemos enviado un código al contacto registrado en la póliza.",
+      });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Inténtalo de nuevo en unos minutos." });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  /** Paso 2: el servidor valida el código y devuelve el expediente para el contrato. */
+  const handleVerifyAndDownload = async () => {
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-policy-access", {
+        body: { matricula: plate, numero_poliza: policy, codigo: code },
+      });
+      if (error || data?.error || !data?.warranty) {
+        toast({ variant: "destructive", title: "Código no válido", description: "El código no es válido o ha caducado." });
+        return;
+      }
+      setFullData(data.warranty as ContractData);
+      setDealer(data.dealer ?? null);
+      setCode("");
+      await downloadPdf(data.warranty as ContractData, data.dealer ?? null);
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo verificar el código." });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const downloadPdf = async (
+    contract: ContractData,
+    dealerData: { nombre_empresa: string; cif?: string } | null,
+  ) => {
     setDownloading(true);
     try {
-      await generateContractPdf({
-        ...warranty,
-        vendedor_empresa: dealer?.nombre_empresa,
-        vendedor_cif: dealer?.cif,
-      }, `Garanticon_${warranty.numero_poliza}.pdf`);
+      await generateContractPdf(
+        {
+          ...contract,
+          vendedor_empresa: dealerData?.nombre_empresa,
+          vendedor_cif: dealerData?.cif,
+        },
+        `Garanticon_${contract.numero_poliza}.pdf`,
+      );
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: err?.message ?? "No se pudo generar el PDF" });
     } finally {
