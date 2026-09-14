@@ -1,5 +1,6 @@
 import { Phone, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
+import { clearConsent } from "@/lib/consent";
 import { Logo } from "./Logo";
 
 export const Footer = () => {
