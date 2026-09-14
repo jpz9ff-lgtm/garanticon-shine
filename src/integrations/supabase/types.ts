@@ -176,6 +176,65 @@ export type Database = {
         }
         Relationships: []
       }
+      policy_access_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          used_at: string | null
+          warranty_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+          warranty_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+          warranty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_access_codes_warranty_id_fkey"
+            columns: ["warranty_id"]
+            isOneToOne: false
+            referencedRelation: "warranties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rate_limits: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: number
+          subject: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: number
+          subject: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: number
+          subject?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
