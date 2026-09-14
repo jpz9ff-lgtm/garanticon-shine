@@ -47,6 +47,14 @@ export const Footer = () => {
             <Link to="/terminos" className="text-background/70 hover:text-background">
               Términos
             </Link>
+            <span aria-hidden className="text-background/30">·</span>
+            <button
+              type="button"
+              onClick={() => clearConsent()}
+              className="text-background/70 underline-offset-4 hover:text-background hover:underline"
+            >
+              Preferencias de cookies
+            </button>
           </p>
         </div>
       </div>
