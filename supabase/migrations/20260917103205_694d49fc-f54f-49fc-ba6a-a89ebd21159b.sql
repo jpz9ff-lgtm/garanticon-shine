@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.generate_poliza_number() TO authenticated, service_role;
