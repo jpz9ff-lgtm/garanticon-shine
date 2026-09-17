@@ -514,7 +514,7 @@ const NewWarranty = () => {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-2 rounded-b-lg border border-t-0 bg-background p-4 text-sm text-muted-foreground">
                   <p>• <strong>Cobertura máxima por avería:</strong> {detectedTier ? `${detectedTier.cobertura.toLocaleString("es-ES")} €` : "—"} IVA inc.</p>
-                  <p>• <strong>Límite total acumulado durante la vigencia:</strong> el valor de tasación del vehículo ({data.precio_venta ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "—"}).</p>
+                  <p>• <strong>Límite total acumulado durante la vigencia:</strong> el precio de venta del vehículo ({data.precio_venta ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "—"}).</p>
                   <p>• <strong>Averías independientes:</strong> averías sin relación técnica entre sí se consideran eventos independientes, cada uno con su propio límite de cobertura.</p>
                 </CollapsibleContent>
               </Collapsible>
@@ -543,8 +543,8 @@ const NewWarranty = () => {
                       He leído y comprendo que la garantía GARANTICON{" "}
                       <strong>{detectedTier?.nombre ?? "—"}</strong> cubre hasta{" "}
                       <strong>{detectedTier ? `${detectedTier.cobertura.toLocaleString("es-ES")} €` : "—"}</strong>{" "}
-                      por avería. El total máximo abonado durante la vigencia del contrato no superará el valor de
-                      tasación del vehículo en el momento de la contratación{" "}
+                      por avería. El total máximo abonado durante la vigencia del contrato no superará el precio de
+                      venta del vehículo{" "}
                       (<strong>{data.precio_venta ? `${Number(data.precio_venta).toLocaleString("es-ES")} €` : "—"}</strong>).
                     </p>
                     <p>
