@@ -852,7 +852,7 @@ export async function generateContractPdf(data: ContractData, filename?: string)
     { label: "VIN / Nº bastidor", value: v(data.bastidor) },
     { label: "Fecha de matriculación", value: fmtDate(data.fecha_matriculacion) },
     { label: "Kilometraje", value: data.km_venta != null ? `${Number(data.km_venta).toLocaleString("es-ES")} km` : "—" },
-    { label: "Valor de tasación", value: fmtEUR(data.precio_venta) },
+    { label: "Precio de venta", value: fmtEUR(data.precio_venta) },
   ], 3);
 
   drawFieldSection(ctx, "Vigencia del contrato", [
